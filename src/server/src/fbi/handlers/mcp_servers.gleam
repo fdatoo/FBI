@@ -2,10 +2,12 @@ import fbi/context.{type Context}
 import fbi/db/connection
 import fbi/db/mcp_servers
 import fbi/json/mcp_server as mcp_server_json
+import gleam/dict.{type Dict}
 import gleam/dynamic/decode
 import gleam/http
 import gleam/int
 import gleam/json
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import wisp.{type Request, type Response}
 
@@ -18,7 +20,11 @@ pub fn handle_global(req: Request, ctx: Context) -> Response {
   }
 }
 
-pub fn handle_global_one(req: Request, ctx: Context, id_str: String) -> Response {
+pub fn handle_global_one(
+  req: Request,
+  ctx: Context,
+  id_str: String,
+) -> Response {
   case int.parse(id_str) {
     Error(_) -> wisp.bad_request("Invalid MCP server ID")
     Ok(id) ->
@@ -97,6 +103,17 @@ fn show(ctx: Context, id: Int) -> Response {
   }
 }
 
+fn encode_string_list(xs: List(String)) -> String {
+  json.array(xs, json.string) |> json.to_string()
+}
+
+fn encode_string_dict(d: Dict(String, String)) -> String {
+  dict.to_list(d)
+  |> list.map(fn(pair) { #(pair.0, json.string(pair.1)) })
+  |> json.object
+  |> json.to_string()
+}
+
 fn decode_body(
   body: decode.Dynamic,
 ) -> Result(
@@ -111,14 +128,25 @@ fn decode_body(
       None,
       decode.optional(decode.string),
     )
-    use args_json <- decode.optional_field("args_json", "[]", decode.string)
+    use args <- decode.optional_field("args", [], decode.list(decode.string))
     use url <- decode.optional_field(
       "url",
       None,
       decode.optional(decode.string),
     )
-    use env_json <- decode.optional_field("env_json", "{}", decode.string)
-    decode.success(#(name, server_type, command, args_json, url, env_json))
+    use env <- decode.optional_field(
+      "env",
+      dict.new(),
+      decode.dict(decode.string, decode.string),
+    )
+    decode.success(#(
+      name,
+      server_type,
+      command,
+      encode_string_list(args),
+      url,
+      encode_string_dict(env),
+    ))
   }
   decode.run(body, decoder)
 }
@@ -199,26 +227,26 @@ fn update(req: Request, ctx: Context, id: Int) -> Response {
       None,
       decode.optional(decode.optional(decode.string)),
     )
-    use args_json <- decode.optional_field(
-      "args_json",
+    use args <- decode.optional_field(
+      "args",
       None,
-      decode.optional(decode.string),
+      decode.optional(decode.list(decode.string)),
     )
     use url <- decode.optional_field(
       "url",
       None,
       decode.optional(decode.optional(decode.string)),
     )
-    use env_json <- decode.optional_field(
-      "env_json",
+    use env <- decode.optional_field(
+      "env",
       None,
-      decode.optional(decode.string),
+      decode.optional(decode.dict(decode.string, decode.string)),
     )
-    decode.success(#(name, server_type, command, args_json, url, env_json))
+    decode.success(#(name, server_type, command, args, url, env))
   }
   case decode.run(body, decoder) {
     Error(_) -> wisp.bad_request("Invalid request body")
-    Ok(#(name, server_type, command, args_json, url, env_json)) ->
+    Ok(#(name, server_type, command, args, url, env)) ->
       case
         mcp_servers.update(
           ctx.db,
@@ -226,9 +254,9 @@ fn update(req: Request, ctx: Context, id: Int) -> Response {
           name,
           server_type,
           command,
-          args_json,
+          option.map(args, encode_string_list),
           url,
-          env_json,
+          option.map(env, encode_string_dict),
         )
       {
         Ok(s) ->

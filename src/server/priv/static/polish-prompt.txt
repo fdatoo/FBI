@@ -1,0 +1,3 @@
+Review the most recent commits on this branch and polish them: improve commit
+messages, split or squash where it improves clarity, and ensure each commit
+stands alone. Do not change behavior — refactor only the history.

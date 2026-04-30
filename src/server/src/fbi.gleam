@@ -3,6 +3,7 @@ import fbi/config
 import fbi/context.{Context}
 import fbi/db/connection
 import fbi/db/migrations
+import fbi/git/mutex as history_mutex
 import fbi/handlers/shell_ws
 import fbi/handlers/states_ws
 import fbi/handlers/usage_ws
@@ -53,12 +54,19 @@ pub fn main() {
 
   let assert Ok(registry) = run_registry.start()
   let assert Ok(pubsub_subject) = pubsub.start()
+  let assert Ok(history_lock) = history_mutex.start()
   reattach.run_all(db, cfg, registry, pubsub_subject)
   let assert Ok(_gc_scheduler) = gc_scheduler.start(db, cfg)
   let assert Ok(_resume_scheduler) =
     resume_scheduler.start(db, cfg, registry, pubsub_subject)
   let ctx =
-    Context(db: db, config: cfg, run_registry: registry, pubsub: pubsub_subject)
+    Context(
+      db: db,
+      config: cfg,
+      run_registry: registry,
+      pubsub: pubsub_subject,
+      history_mutex: history_lock,
+    )
 
   let wisp_fn =
     wisp_mist.handler(fn(req) { router.handle(req, ctx) }, cfg.secret_key)

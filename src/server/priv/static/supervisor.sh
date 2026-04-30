@@ -43,6 +43,11 @@ _fbi_fatal()  { printf '\033[31m✕\033[0m  \033[31m%s\033[0m\n' "$*" >&2; }
 
 export SSH_AUTH_SOCK=/ssh-agent
 
+# WIP snapshotter — periodic snapshot of the working tree to safeguard.
+if [ -x /usr/local/bin/fbi-wip-snapshotter.sh ]; then
+    /usr/local/bin/fbi-wip-snapshotter.sh >/dev/null 2>&1 &
+fi
+
 # Take ownership of the bind-mounted state and safeguard dirs. These are
 # created on the host by the server process and bind-mounted in; their
 # host uid won't match agent (1001) so writes from supervisor.sh and the
@@ -228,6 +233,18 @@ else
             printf '\n\n---\n\n' >> /tmp/prompt.txt
         fi
     done
+    case "${FBI_KIND:-work}" in
+      polish)
+        if [ -f /usr/local/share/fbi/polish-prompt.txt ]; then
+          cat /usr/local/share/fbi/polish-prompt.txt > /fbi/prompt.txt
+        fi
+        ;;
+      merge-conflict)
+        cat <<'EOF' > /fbi/prompt.txt
+Resolve the merge conflicts in /workspace, then commit the resolution.
+EOF
+        ;;
+    esac
     [ -f /fbi/prompt.txt ] || { _fbi_fatal "prompt.txt not found in /fbi"; exit 12; }
     cat /fbi/prompt.txt >> /tmp/prompt.txt
     touch /fbi-state/prompted

@@ -1,0 +1,8 @@
+name: bracketed-paste-cycle
+steps:
+  - emit_ansi: "\x1b[?2004h"
+  - emit_ansi: "bracketed paste enabled\r\n"
+  - sleep_ms: 30
+  - emit_ansi: "\x1b[?2004l"
+  - emit_ansi: "and disabled\r\n"
+  - exit: 0

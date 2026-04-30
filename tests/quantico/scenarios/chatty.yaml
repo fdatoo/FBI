@@ -1,0 +1,124 @@
+name: chatty
+steps:
+  - emit_ansi: "\x1b[1;36m○\x1b[0m thinking…\n"
+  - sleep_ms: 800
+  - emit: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque habitant morbi tristique senectus.\n"
+  - sleep_ms: 1000
+  - emit: "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mQuis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\n"
+  - sleep_ms: 1000
+  - emit: "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mAt vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime.\n"
+  - sleep_ms: 1000
+  - emit: "Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mItaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.\n"
+  - sleep_ms: 1000
+  - emit: "Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam nisi ut.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mNeque porro quisquam est, qui dolorem ipsum quia dolor sit amet consectetur adipisci velit.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.\n"
+  - sleep_ms: 1000
+  - emit: "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mMagni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est qui dolorem.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum.\n"
+  - sleep_ms: 1000
+  - emit: "Exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur quis.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mAut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias.\n"
+  - sleep_ms: 1000
+  - emit: "Consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt sed ipsum quia dolor sit.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mOn the other hand, we denounce with righteous indignation and dislike men who are so beguiled.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot foresee.\n"
+  - sleep_ms: 1000
+  - emit: "The pain and trouble that are bound to ensue; and equal blame belongs to those who fail in their duty.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mThrough weakness of will, which is the same as saying through shrinking from toil and pain.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "These cases are perfectly simple and easy to distinguish. In a free hour, when our power of choice is.\n"
+  - sleep_ms: 1000
+  - emit: "Untrammelled and when nothing prevents our being able to do what we like best, every pleasure is to be.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mWelcome and every pain avoided. But in certain circumstances and owing to the claims of duty.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Or the obligations of business it will frequently occur that pleasures have to be repudiated and.\n"
+  - sleep_ms: 1000
+  - emit: "Annoyances accepted. The wise man therefore always holds in these matters to this principle of selection.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mHe rejects pleasures to secure other greater pleasures, or else he endures pains to avoid worse pains.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum.\n"
+  - sleep_ms: 1000
+  - emit: "Deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mSimilique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis eligendi.\n"
+  - sleep_ms: 1000
+  - emit: "Optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mOmnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum.\n"
+  - sleep_ms: 1000
+  - emit: "Hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mPerferendis doloribus asperiores repellat. Qui enim ex eis qui ratione voluptatem sequi nesciunt.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur.\n"
+  - sleep_ms: 1000
+  - emit: "Magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est qui dolorem ipsum.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mQui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima.\n"
+  - sleep_ms: 1000
+  - emit: "Veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mConsequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur at vero eos.\n"
+  - sleep_ms: 1000
+  - emit: "Et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mAtque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga et harum.\n"
+  - sleep_ms: 1000
+  - emit: "Quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mOptio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Assumenda est, omnis dolor repellendus temporibus autem quibusdam et aut officiis debitis rerum.\n"
+  - sleep_ms: 1000
+  - emit: "Necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae itaque.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[3mEarum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Consequatur aut perferendis doloribus asperiores repellat. Praesent commodo cursus magna vel scelerisque.\n"
+  - sleep_ms: 1000
+  - emit: "Nisl consectetur et. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor curabitur.\n"
+  - sleep_ms: 1000
+  - emit_ansi: "\x1b[1mBlandit tempus porttitor. Nullam quis risus eget urna mollis ornare vel eu leo aenean lacinia.\x1b[0m\n"
+  - sleep_ms: 1000
+  - emit: "Bibendum sem non magna erat euismod integer posuere erat ante venenatis dapibus posuere velit aliquet.\n"
+  - sleep_ms: 1000
+  - emit: "Cras mattis consectetur purus sit amet fermentum. Cras justo odio, dapibus ac facilisis in egestas.\n"
+  - sleep_ms: 1000
+  - emit: "All done.\n"
+  - exit: 0

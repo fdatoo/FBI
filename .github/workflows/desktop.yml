@@ -1,0 +1,233 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Expose tauri CLI on PATH
+        run: echo "$GITHUB_WORKSPACE/node_modules/.bin" >> $GITHUB_PATH
+
+      - name: Build fbi-tunnel sidecar
+        run: make build-sidecar
+
+      - name: Build fbi-tunnel CLI dist (darwin)
+        run: make build-dist
+
+      - name: Build web frontend
+        run: npm run build:web
+
+      - name: Build macOS desktop app
+        run: tauri build
+        working-directory: src/desktop
+        env:
+          # Apple Signing only — notarization is done in a later step so progress is observable
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Tauri Updater
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Notarize and staple macOS .dmg
+        timeout-minutes: 30
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          DMG=$(ls target/release/bundle/dmg/*.dmg | head -1)
+          echo "Submitting $DMG to Apple notary..."
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait \
+            --verbose \
+            --output-format json
+          echo "Stapling ticket to $DMG..."
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-bundles
+          path: |
+            target/release/bundle/dmg/*.dmg
+            target/release/bundle/macos/*.app.tar.gz
+            target/release/bundle/macos/*.app.tar.gz.sig
+          if-no-files-found: error
+
+      - name: Upload darwin CLI dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-dist-darwin
+          path: dist/cli/fbi-tunnel-darwin-*
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            gcc-aarch64-linux-gnu
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Expose tauri CLI on PATH
+        run: echo "$GITHUB_WORKSPACE/node_modules/.bin" >> $GITHUB_PATH
+
+      - name: Build fbi-tunnel sidecar
+        run: make build-sidecar
+
+      - name: Build fbi-tunnel CLI dist (linux)
+        run: make build-dist
+
+      - name: Build web frontend
+        run: npm run build:web
+
+      - name: Build Linux desktop app
+        run: tauri build
+        working-directory: src/desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundles
+          path: |
+            target/release/bundle/deb/*.deb
+            target/release/bundle/appimage/*.AppImage
+            target/release/bundle/appimage/*.AppImage.tar.gz
+            target/release/bundle/appimage/*.AppImage.tar.gz.sig
+          if-no-files-found: error
+
+      - name: Upload linux CLI dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-dist-linux
+          path: dist/cli/fbi-tunnel-linux-*
+
+  release:
+    needs: [build-macos, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-bundles
+          path: artifacts/macos
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-bundles
+          path: artifacts/linux
+
+      - name: Download darwin CLI dist
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-dist-darwin
+          path: artifacts/cli
+
+      - name: Download linux CLI dist
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-dist-linux
+          path: artifacts/cli
+
+      - name: Generate latest.json
+        run: |
+          python3 << 'EOF'
+          import json, os, glob
+          from datetime import datetime, timezone
+
+          tag = os.environ['GITHUB_REF_NAME']
+          version = tag.lstrip('v')
+          pub_date = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          platforms = {}
+
+          for sig_file in glob.glob('artifacts/macos/**/*.app.tar.gz.sig', recursive=True):
+              tgz = sig_file[:-4]
+              if os.path.exists(tgz):
+                  sig = open(sig_file).read().strip()
+                  filename = os.path.basename(tgz)
+                  platforms['darwin-aarch64'] = {
+                      'signature': sig,
+                      'url': f'https://github.com/fynn-labs/FBI/releases/download/{tag}/{filename}'
+                  }
+
+          for sig_file in glob.glob('artifacts/linux/**/*.AppImage.tar.gz.sig', recursive=True):
+              tgz = sig_file[:-4]
+              if os.path.exists(tgz):
+                  sig = open(sig_file).read().strip()
+                  filename = os.path.basename(tgz)
+                  platforms['linux-x86_64'] = {
+                      'signature': sig,
+                      'url': f'https://github.com/fynn-labs/FBI/releases/download/{tag}/{filename}'
+                  }
+
+          data = {'version': version, 'notes': '', 'pub_date': pub_date, 'platforms': platforms}
+          json.dump(data, open('latest.json', 'w'), indent=2)
+          print(json.dumps(data, indent=2))
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/macos/**/*.dmg
+            artifacts/macos/**/*.app.tar.gz
+            artifacts/macos/**/*.app.tar.gz.sig
+            artifacts/linux/**/*.deb
+            artifacts/linux/**/*.AppImage
+            artifacts/linux/**/*.AppImage.tar.gz
+            artifacts/linux/**/*.AppImage.tar.gz.sig
+            artifacts/cli/fbi-tunnel-*
+            latest.json

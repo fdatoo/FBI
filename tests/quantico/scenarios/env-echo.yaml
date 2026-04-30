@@ -1,0 +1,13 @@
+name: env-echo
+steps:
+  - echo_env:
+      - RUN_ID
+      - FBI_BRANCH
+      - GIT_AUTHOR_NAME
+      - GIT_AUTHOR_EMAIL
+      - FBI_RESUME_SESSION_ID
+      - FBI_MARKETPLACES
+      - FBI_PLUGINS
+      - MOCK_CLAUDE_SCENARIO
+      - MOCK_CLAUDE_SPEED_MULT
+  - exit: 0

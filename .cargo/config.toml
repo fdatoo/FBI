@@ -1,0 +1,7 @@
+# macOS linker flag required for Erlang NIFs: enif_* symbols are provided
+# by the BEAM at runtime, so the static linker must allow them to be undefined.
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]

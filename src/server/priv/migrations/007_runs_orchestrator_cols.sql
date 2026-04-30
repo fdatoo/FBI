@@ -1,0 +1,3 @@
+ALTER TABLE runs ADD COLUMN kind TEXT NOT NULL DEFAULT 'work';
+ALTER TABLE runs ADD COLUMN kind_args_json TEXT;
+ALTER TABLE runs ADD COLUMN mirror_status TEXT;

@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    name: Rust (cargo test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Test
+        run: |
+          cargo test -p fbi-tunnel
+          cargo test -p quantico
+
+  gleam:
+    name: Gleam (test + lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/server
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Erlang/OTP + Gleam
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: '27.2'
+          gleam-version: '1.16.0'
+          rebar3-version: '3'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build NIF
+        run: make nif
+
+      - name: Format check
+        run: gleam format --check
+
+      - name: Shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck \
+            priv/static/supervisor.sh \
+            priv/static/postbuild.sh \
+            priv/static/postbuild-tools.sh \
+            priv/static/finalizeBranch.sh \
+            priv/static/fbi-history-op.sh
+
+      - name: Test
+        run: gleam test
+
+  e2e-quantico:
+    name: E2E (Playwright + Quantico)
+    runs-on: ubuntu-latest
+    needs: rust  # ensure Quantico binary is build-able
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install Erlang/OTP + Gleam
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: '27.2'
+          gleam-version: '1.16.0'
+          rebar3-version: '3'
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+      - name: Build NIF + compile Gleam
+        working-directory: src/server
+        run: |
+          gleam deps download
+          make nif
+          gleam build
+
+      - name: Install Node deps
+        run: npm ci
+
+      # CI only needs the host binary for e2e — make build-dist cross-compiles
+      # all targets but requires extra rustup targets + linkers not on the runner.
+      - name: Build Quantico (host only)
+        run: cargo build --release -p quantico --target x86_64-unknown-linux-gnu
+      - name: Stage Quantico binary
+        run: |
+          mkdir -p dist/cli
+          cp target/x86_64-unknown-linux-gnu/release/quantico dist/cli/quantico-linux-amd64
+
+      - name: Build web bundle
+        run: npm run build:web
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate e2e secrets key
+        # FBI.Crypto.load_key! raises if SECRETS_KEY_FILE is missing/wrong-size.
+        run: |
+          head -c 32 /dev/urandom > /tmp/fbi-e2e.key
+          chmod 600 /tmp/fbi-e2e.key
+      - name: Provision empty bare repo for e2e helper
+        # tests/e2e/quantico/helpers.ts ensureProject creates a project with
+        # repo_url=/tmp/empty-repo.git. The orchestrator bind-mounts that path
+        # into the container so supervisor.sh's `git clone` succeeds. Without
+        # this step the bind would fail at container creation.
+        run: git init --bare --initial-branch=main /tmp/empty-repo.git
+      - name: Create ~/.claude directory for CredentialsReader watcher
+        # FileSystem watcher throws ENOENT if the dir doesn't exist.
+        run: mkdir -p "$HOME/.claude"
+
+      - name: Run e2e
+        env:
+          FBI_QUANTICO_BINARY_PATH: ${{ github.workspace }}/dist/cli/quantico-linux-amd64
+        run: npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+
+  image-scan:
+    name: Trivy scan agent image
+    runs-on: ubuntu-latest
+    needs: gleam
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build agent image
+        run: make build-image
+        env:
+          FBI_IMAGE_TAG: fbi-image-scan
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: fbi-image-scan
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          # Initially advisory-only — flip exit-code to '1' once the
+          # baseline noise is understood and acceptable.
+          exit-code: '0'
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif

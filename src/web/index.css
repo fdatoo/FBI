@@ -1,0 +1,27 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+@import './ui/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    overscroll-behavior: none;
+  }
+
+  /*
+   * ghostty-web renders to a single canvas element inside the host div.
+   * pan-y allows native momentum scrolling on mobile while the terminal
+   * still receives tap/selection events via the canvas wheel handler.
+   */
+  [data-testid="xterm"] canvas {
+    touch-action: pan-y !important;
+  }
+}

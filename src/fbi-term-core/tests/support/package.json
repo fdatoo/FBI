@@ -1,0 +1,9 @@
+{
+  "name": "xterm-ref-harness",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@xterm/headless": "^6.0.0"
+  }
+}

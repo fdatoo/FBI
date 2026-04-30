@@ -1,0 +1,16 @@
+name: default
+steps:
+  - emit_ansi: "\x1b[1;36m○\x1b[0m thinking…\n"
+  - sleep_ms: 800
+  - emit: "I'll work through this carefully.\n"
+  - sleep_ms: 600
+  - emit: "First, I need to understand the structure.\n"
+  - sleep_ms: 600
+  - emit_ansi: "\x1b[2m  Read(src/index.ts)\x1b[0m\n"
+  - sleep_ms: 400
+  - emit: "Now let me check how it's used elsewhere.\n"
+  - sleep_ms: 400
+  - emit_ansi: "\x1b[2m  Bash($ rg --hidden 'thing')\x1b[0m\n"
+  - sleep_ms: 600
+  - emit: "Done.\n"
+  - exit: 0

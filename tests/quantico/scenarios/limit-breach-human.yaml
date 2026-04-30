@@ -1,0 +1,9 @@
+name: limit-breach-human
+steps:
+  - emit: "I'll start working on this.\n"
+  - write_jsonl: { type: "user", content: "start" }
+  - sleep_ms: 1000
+  - emit: "Reading the codebase...\n"
+  - sleep_ms: 1000
+  - emit: "Claude usage limit reached. Your limit will reset at 5pm.\n"
+  - sleep_forever: true

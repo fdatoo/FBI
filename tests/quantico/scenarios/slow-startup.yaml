@@ -1,0 +1,5 @@
+name: slow-startup
+steps:
+  - sleep_ms: 30000
+  - emit: "Finally awake.\n"
+  - exit: 0

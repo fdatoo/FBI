@@ -212,7 +212,11 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
   }
 }
 
-pub fn handle_resume_now(req: Request, ctx: Context, id_str: String) -> Response {
+pub fn handle_resume_now(
+  req: Request,
+  ctx: Context,
+  id_str: String,
+) -> Response {
   case req.method {
     http.Post ->
       case int.parse(id_str) {
@@ -478,7 +482,10 @@ fn index_paged(ctx: Context, filter: runs.ListFilter) -> Response {
   }
 }
 
-fn get_param(qs: List(#(String, String)), key: String) -> option.Option(String) {
+fn get_param(
+  qs: List(#(String, String)),
+  key: String,
+) -> option.Option(String) {
   case list.key_find(qs, key) {
     Ok(v) if v != "" -> Some(v)
     _ -> None

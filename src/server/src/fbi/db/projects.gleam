@@ -122,7 +122,10 @@ pub fn get(db: sqlight.Connection, id: Int) -> Result(Project, DbError) {
   )
 }
 
-pub fn insert(db: sqlight.Connection, p: NewProject) -> Result(Project, DbError) {
+pub fn insert(
+  db: sqlight.Connection,
+  p: NewProject,
+) -> Result(Project, DbError) {
   let sql =
     "INSERT INTO projects
        (name, repo_url, default_branch, devcontainer_override_json, instructions,

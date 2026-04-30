@@ -496,7 +496,11 @@ fn seed_mount_from_parent(
               Error(_) -> Nil
               Ok(files) ->
                 list.each(files, fn(fname) {
-                  let _ = simplifile.copy_file(src <> "/" <> fname, dst <> "/" <> fname)
+                  let _ =
+                    simplifile.copy_file(
+                      src <> "/" <> fname,
+                      dst <> "/" <> fname,
+                    )
                   Nil
                 })
             }

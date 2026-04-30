@@ -497,7 +497,9 @@ fn seed_mount_for_session(
   }
 }
 
-// Walk runs_dir/<N>/mount looking for -workspace/<session_id>.jsonl.
+// Walk runs_dir/<N>/{mount,claude-projects} looking for
+// -workspace/<session_id>.jsonl. Checks both names because the legacy
+// Elixir server used "claude-projects/" while the current server uses "mount/".
 fn find_session_mount(
   runs_dir: String,
   session_id: String,
@@ -506,12 +508,15 @@ fn find_session_mount(
     Error(_) -> option.None
     Ok(run_ids) ->
       list.find_map(run_ids, fn(rid) {
-        let candidate = runs_dir <> "/" <> rid <> "/mount"
-        let jsonl = candidate <> "/-workspace/" <> session_id <> ".jsonl"
-        case simplifile.is_file(jsonl) {
-          Ok(True) -> Ok(candidate)
-          _ -> Error(Nil)
-        }
+        let run_dir = runs_dir <> "/" <> rid
+        list.find_map(["mount", "claude-projects"], fn(dir_name) {
+          let candidate = run_dir <> "/" <> dir_name
+          let jsonl = candidate <> "/-workspace/" <> session_id <> ".jsonl"
+          case simplifile.is_file(jsonl) {
+            Ok(True) -> Ok(candidate)
+            _ -> Error(Nil)
+          }
+        })
       })
       |> option.from_result
   }

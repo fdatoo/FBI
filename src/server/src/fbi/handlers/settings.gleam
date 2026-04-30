@@ -7,7 +7,7 @@ import fbi/run/image_gc
 import gleam/dynamic/decode
 import gleam/http
 import gleam/json
-import gleam/option.{None, type Option}
+import gleam/option.{type Option, None}
 import wisp.{type Request, type Response}
 
 pub fn handle(req: Request, ctx: Context) -> Response {

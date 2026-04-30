@@ -1,0 +1,52 @@
+name: tool-heavy
+steps:
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mRead\x1b[0m(src/index.ts)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  > 200 lines\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mBash\x1b[0m(\x1b[33m$ rg --files-with-matches 'thing'\x1b[0m)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  src/index.ts\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mRead\x1b[0m(src/utils.ts)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  > 85 lines\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mBash\x1b[0m(\x1b[33m$ git log --oneline -10\x1b[0m)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  abc1234 fix: previous commit\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mRead\x1b[0m(package.json)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  > 42 lines\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mBash\x1b[0m(\x1b[33m$ npm test -- --passWithNoTests\x1b[0m)\n"
+  - sleep_ms: 400
+  - emit_ansi: "\x1b[2m  > Tests: 12 passed\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mWrite\x1b[0m(src/output.ts)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  > written 55 lines\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mBash\x1b[0m(\x1b[33m$ tsc --noEmit\x1b[0m)\n"
+  - sleep_ms: 300
+  - emit_ansi: "\x1b[2m  > 0 errors\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mRead\x1b[0m(src/types.ts)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  > 120 lines\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mBash\x1b[0m(\x1b[33m$ rg -n 'export interface' src/\x1b[0m)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  src/types.ts:5:export interface Config\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mWrite\x1b[0m(src/index.ts)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  > written 215 lines\x1b[0m\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[1;36m●\x1b[0m \x1b[1mBash\x1b[0m(\x1b[33m$ git diff --stat\x1b[0m)\n"
+  - sleep_ms: 200
+  - emit_ansi: "\x1b[2m  2 files changed, 30 insertions(+), 5 deletions(-)\x1b[0m\n"
+  - sleep_ms: 200
+  - emit: "Done.\n"
+  - exit: 0

@@ -1,0 +1,18 @@
+name: alt-screen-cycle
+steps:
+  - emit_ansi: "main screen line 1\r\n"
+  - emit_ansi: "main screen line 2\r\n"
+  - sleep_ms: 50
+  - emit_ansi: "\x1b[?1049h"
+  - emit_ansi: "alt screen content line 1\r\n"
+  - emit_ansi: "alt screen content line 2\r\n"
+  - sleep_ms: 50
+  - emit_ansi: "\x1b[?1049l"
+  - emit_ansi: "back to main\r\n"
+  - sleep_ms: 50
+  - emit_ansi: "\x1b[?1049h"
+  - emit_ansi: "second alt visit\r\n"
+  - sleep_ms: 50
+  - emit_ansi: "\x1b[?1049l"
+  - emit_ansi: "main again\r\n"
+  - exit: 0

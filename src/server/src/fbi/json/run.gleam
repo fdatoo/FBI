@@ -1,0 +1,42 @@
+import fbi/db/runs.{type Run}
+import gleam/json
+
+pub fn encode(r: Run) -> json.Json {
+  json.object([
+    #("id", json.int(r.id)),
+    #("project_id", json.int(r.project_id)),
+    #("prompt", json.string(r.prompt)),
+    #("branch_name", json.string(r.branch_name)),
+    #("state", json.string(r.state)),
+    #("container_id", json.nullable(r.container_id, json.string)),
+    #("log_path", json.string(r.log_path)),
+    #("exit_code", json.nullable(r.exit_code, json.int)),
+    #("error", json.nullable(r.error, json.string)),
+    #("head_commit", json.nullable(r.head_commit, json.string)),
+    #("started_at", json.nullable(r.started_at, json.int)),
+    #("finished_at", json.nullable(r.finished_at, json.int)),
+    #("created_at", json.int(r.created_at)),
+    #("state_entered_at", json.int(r.state_entered_at)),
+    #("model", json.nullable(r.model, json.string)),
+    #("effort", json.nullable(r.effort, json.string)),
+    #("subagent_model", json.nullable(r.subagent_model, json.string)),
+    #("resume_attempts", json.int(r.resume_attempts)),
+    #("next_resume_at", json.nullable(r.next_resume_at, json.int)),
+    #("claude_session_id", json.nullable(r.claude_session_id, json.string)),
+    #("last_limit_reset_at", json.nullable(r.last_limit_reset_at, json.int)),
+    #("tokens_input", json.int(r.tokens_input)),
+    #("tokens_output", json.int(r.tokens_output)),
+    #("tokens_cache_read", json.int(r.tokens_cache_read)),
+    #("tokens_cache_create", json.int(r.tokens_cache_create)),
+    #("tokens_total", json.int(r.tokens_total)),
+    #("usage_parse_errors", json.int(r.usage_parse_errors)),
+    #("title", json.nullable(r.title, json.string)),
+    #("title_locked", json.bool(r.title_locked)),
+    #("parent_run_id", json.nullable(r.parent_run_id, json.int)),
+    #("kind", json.string(r.kind)),
+    #("kind_args_json", json.nullable(r.kind_args_json, json.string)),
+    #("mirror_status", json.nullable(r.mirror_status, json.string)),
+    #("mock", json.bool(r.mock)),
+    #("mock_scenario", json.nullable(r.mock_scenario, json.string)),
+  ])
+}

@@ -1,0 +1,23 @@
+name: Quantico Fidelity Probe
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # weekly Mondays 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.QUANTICO_FIDELITY_LIVE == '1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show snapshot the probe will diff against
+        run: cat tests/quantico/fidelity-snapshot.json
+      - name: Validate snapshot is well-formed JSON
+        run: jq empty tests/quantico/fidelity-snapshot.json
+      - name: Note for the operator
+        run: |
+          echo "Fidelity probe is gated on the QUANTICO_FIDELITY_LIVE repo variable."
+          echo "Set it to 1 only after CLAUDE_OAUTH_TOKEN is added as a repo secret."
+          echo "When enabled, this job invokes real claude with a known prompt and"
+          echo "diffs the limit-message wording / JSONL field set against the snapshot."

@@ -1,0 +1,8 @@
+name: cjk-wide
+steps:
+  - emit_ansi: "ASCII line\r\n"
+  - emit_ansi: "你好 hello CJK\r\n"
+  - emit_ansi: "日本語のテスト\r\n"
+  - emit_ansi: "emoji: 🎉 🚀 🐈\r\n"
+  - emit_ansi: "mixed: A你B日C语D\r\n"
+  - exit: 0

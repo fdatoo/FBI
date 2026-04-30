@@ -1,0 +1,6 @@
+name: garbled
+steps:
+  - emit_ansi: "\x1b[99999H\xc3\x28 raw bytes \xff\xfe\n"
+  - sleep_ms: 500
+  - emit_ansi: "\x1b[?25l\x1b[2J more junk \x1b[0m\n"
+  - exit: 0

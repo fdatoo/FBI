@@ -1,0 +1,3 @@
+Running scenario 'resume-aware'.
+(if launched with --resume, main.rs already printed the resume marker before this scenario started)
+Done.

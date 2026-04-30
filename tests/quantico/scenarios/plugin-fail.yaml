@@ -1,0 +1,4 @@
+name: plugin-fail
+steps:
+  - emit: "(plugin-fail scenario: see main.rs plugin subcommand handling)\n"
+  - exit: 0

@@ -1,0 +1,9 @@
+name: limit-breach
+steps:
+  - emit: "I'll start working on this.\n"
+  - write_jsonl: { type: "user", content: "start" }
+  - sleep_ms: 1000
+  - emit: "Reading the codebase...\n"
+  - sleep_ms: 1000
+  - emit_limit_breach: { reset_epoch: "+1h" }
+  - sleep_forever: true

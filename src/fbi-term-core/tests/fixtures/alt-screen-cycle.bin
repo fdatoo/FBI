@@ -1,0 +1,7 @@
+main screen line 1
+main screen line 2
+[?1049halt screen content line 1
+alt screen content line 2
+[?1049lback to main
+[?1049hsecond alt visit
+[?1049lmain again

@@ -362,6 +362,7 @@ pub fn insert_run(
   db: sqlight.Connection,
   project_id: Int,
   prompt: String,
+  branch: option.Option(String),
   model: Option(String),
   effort: Option(String),
   subagent_model: Option(String),
@@ -369,17 +370,15 @@ pub fn insert_run(
   mock_scenario: Option(String),
   now: Int,
 ) -> Result(Run, DbError) {
-  let branch_name = "claude/run-" <> int.to_string(now)
   let log_path = "/var/log/fbi/runs/" <> int.to_string(now) <> ".log"
-  connection.query_one(
+  use run <- result.try(connection.query_one(
     "INSERT INTO runs (project_id, prompt, branch_name, state, log_path, created_at, state_entered_at, model, effort, subagent_model, mock, mock_scenario)
-     VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "
+     VALUES (?, ?, '', 'queued', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "
       <> columns(),
     db,
     [
       sqlight.int(project_id),
       sqlight.text(prompt),
-      sqlight.text(branch_name),
       sqlight.text(log_path),
       sqlight.int(now),
       sqlight.int(now),
@@ -393,7 +392,27 @@ pub fn insert_run(
       nullable_opt(mock_scenario),
     ],
     decoder(),
+  ))
+  let branch_name = case branch {
+    option.Some(b) -> b
+    option.None -> "claude/run-" <> int.to_string(run.id)
+  }
+  connection.query_one(
+    "UPDATE runs SET branch_name = ? WHERE id = ? RETURNING " <> columns(),
+    db,
+    [sqlight.text(branch_name), sqlight.int(run.id)],
+    decoder(),
   )
+}
+
+pub fn branch_in_use(db: sqlight.Connection, branch: String) -> Result(Bool, DbError) {
+  connection.query_one(
+    "SELECT COUNT(*) FROM runs WHERE branch_name = ? AND state IN ('queued', 'running', 'waiting', 'awaiting_resume')",
+    db,
+    [sqlight.text(branch)],
+    decode.at([0], decode.int),
+  )
+  |> result.map(fn(n) { n > 0 })
 }
 
 pub fn insert_continue_run(
@@ -523,7 +542,9 @@ pub fn mark_finished(
     _ -> "failed"
   }
   connection.query_one(
-    "UPDATE runs SET state = ?, exit_code = ?, head_commit = ?, finished_at = ?, error = ?,
+    "UPDATE runs SET state = ?, exit_code = ?, branch_name = COALESCE(?, branch_name),
+     head_commit = ?, finished_at = ?, error = ?,
+     title = COALESCE(?, title),
      claude_session_id = COALESCE(?, claude_session_id)
      WHERE id = ? RETURNING "
       <> columns(),
@@ -531,6 +552,10 @@ pub fn mark_finished(
     [
       sqlight.text(state),
       sqlight.int(outcome.exit_code),
+      case outcome.branch_pushed {
+        option.None -> sqlight.null()
+        option.Some(b) -> sqlight.text(b)
+      },
       case outcome.head_commit {
         option.None -> sqlight.null()
         option.Some(c) -> sqlight.text(c)
@@ -539,6 +564,10 @@ pub fn mark_finished(
       case outcome.error_message {
         option.None -> sqlight.null()
         option.Some(e) -> sqlight.text(e)
+      },
+      case outcome.title {
+        option.None -> sqlight.null()
+        option.Some(t) -> sqlight.text(t)
       },
       case outcome.claude_session_id {
         option.None -> sqlight.null()

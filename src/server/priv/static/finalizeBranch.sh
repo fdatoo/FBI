@@ -26,6 +26,11 @@ git fetch --quiet origin "$DEFAULT_BRANCH" 2>/dev/null || true
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
 HEAD_SHA="$(git rev-parse HEAD 2>/dev/null || echo '')"
 
+TITLE=""
+if [ -f /fbi-state/title ]; then
+    TITLE="$(tr -d '\n\r' < /fbi-state/title | head -c 200)"
+fi
+
 # Push exit is sourced from the last origin-push log (written by the post-
 # commit hook). No-remote projects write no log; treat absent log as success.
 PUSH_EXIT=0
@@ -35,5 +40,5 @@ if [ -f /tmp/last-origin-push.log ]; then
     fi
 fi
 
-printf '{"exit_code":%d,"push_exit":%d,"head_sha":"%s","branch":"%s","session_id":"%s"}\n' \
-    "$CLAUDE_EXIT" "$PUSH_EXIT" "$HEAD_SHA" "$CURRENT_BRANCH" "${SESSION_ID:-}" > "$RESULT_PATH"
+printf '{"exit_code":%d,"push_exit":%d,"head_sha":"%s","branch":"%s","session_id":"%s","title":"%s"}\n' \
+    "$CLAUDE_EXIT" "$PUSH_EXIT" "$HEAD_SHA" "$CURRENT_BRANCH" "${SESSION_ID:-}" "$TITLE" > "$RESULT_PATH"

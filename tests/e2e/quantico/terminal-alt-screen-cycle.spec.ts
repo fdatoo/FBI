@@ -19,7 +19,12 @@ test('alt-screen-cycle: snapshot reload reproduces live state', async ({ page })
     // otherwise late bytes between the live and rebuilt captures make the
     // equality check non-deterministic.
     await run.waitForFinalState();
+    // 500ms settle so trailing BroadcastChunk messages (which can land after
+    // StateChanged under parallel load) finish draining to the xterm before
+    // we start polling. Wait for the terminal to finish rendering the
+    // transcript history. loadBoundedHistory is async; waitForTerminalText polls.
     await page.waitForTimeout(500);
+    await run.waitForTerminalText('main screen line 1', { timeoutMs: 15_000 });
     // Compare from the first scenario-emitted line. We skip the orchestrator
     // preamble (image-build / git-clone chrome) because its CR-overwrite
     // progress noise isn't reproduced byte-identically by the snapshot

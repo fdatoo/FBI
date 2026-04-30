@@ -166,21 +166,19 @@ fn mock_container_spec(
   let entrypoint =
     "mkdir -p /fbi-state"
     <> " && touch /fbi-state/ready"
-    <> " && exec /usr/local/bin/quantico --scenario $MOCK_SCENARIO --dangerously-skip-permissions"
+    <> " && if [ -n \"$FBI_RESUME_SESSION_ID\" ]; then"
+    <> " exec /usr/local/bin/quantico --scenario $MOCK_CLAUDE_SCENARIO --dangerously-skip-permissions --resume \"$FBI_RESUME_SESSION_ID\";"
+    <> " else exec /usr/local/bin/quantico --scenario $MOCK_CLAUDE_SCENARIO --dangerously-skip-permissions; fi"
+  let env =
+    list.append(build_env(input), [
+      "MOCK_CLAUDE_SCENARIO=" <> scenario,
+      // Run scenarios at 10× speed so CI timeouts are never close.
+      "MOCK_CLAUDE_SPEED_MULT=10.0",
+    ])
   json.object([
     #("Image", json.string("ubuntu:24.04")),
     #("User", json.string("0")),
-    #(
-      "Env",
-      json.array(
-        [
-          "MOCK_SCENARIO=" <> scenario,
-          // Run scenarios at 10× speed so CI timeouts are never close.
-          "MOCK_CLAUDE_SPEED_MULT=10.0",
-        ],
-        json.string,
-      ),
-    ),
+    #("Env", json.array(env, json.string)),
     #("Tty", json.bool(True)),
     #("OpenStdin", json.bool(True)),
     #("StdinOnce", json.bool(False)),

@@ -9,6 +9,10 @@ pub struct ExecCtx<'a, W: Write> {
     pub cwd: String,
     pub argv: Vec<String>,
     pub session_path: PathBuf,
+    /// Optional FBI state dir (FBI_STATE_DIR env var). When set, the executor
+    /// writes agent-status and result.json signals so the FBI server can
+    /// track mock run state the same way it does for real container runs.
+    pub state_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,6 +55,11 @@ pub fn run<W: Write>(scenario: &Scenario, ctx: &mut ExecCtx<W>) -> std::io::Resu
                 let line = crate::limit::breach_line(epoch);
                 ctx.stdout.write_all(line.as_bytes())?;
                 ctx.stdout.flush()?;
+                // Signal the FBI server that the run is awaiting a resume.
+                if let Some(ref dir) = ctx.state_dir {
+                    let _ = std::fs::create_dir_all(dir);
+                    let _ = std::fs::write(dir.join("agent-status"), "awaiting_resume");
+                }
             }
         }
     }
@@ -74,6 +83,7 @@ mod tests {
             cwd: "/workspace".into(),
             argv: vec!["--dangerously-skip-permissions".into()],
             session_path: PathBuf::from("/tmp/dummy.jsonl"),
+            state_dir: None,
         }
     }
 
@@ -128,6 +138,7 @@ mod tests {
             cwd: "/workspace".into(),
             argv: vec![],
             session_path: path.clone(),
+            state_dir: None,
         };
         run(&scenario, &mut c).unwrap();
         assert!(path.exists());
@@ -158,6 +169,7 @@ mod tests {
             cwd: "/workspace".into(),
             argv: vec![],
             session_path: PathBuf::from("/tmp/dummy.jsonl"),
+            state_dir: None,
         };
         run(&scenario, &mut c).unwrap();
         let s = String::from_utf8(buf).unwrap();

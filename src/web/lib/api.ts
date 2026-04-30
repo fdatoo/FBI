@@ -186,7 +186,7 @@ export const api = {
       subagent_model: string | null;
     },
   ) =>
-    request<void>(`/api/runs/${id}/continue`, {
+    request<Run>(`/api/runs/${id}/continue`, {
       method: 'POST',
       body: JSON.stringify(modelParams),
     }),

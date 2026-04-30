@@ -262,11 +262,17 @@ fn create(req: Request, ctx: Context, project_id: Int) -> Response {
       None,
       decode.optional(decode.string),
     )
-    decode.success(#(prompt, model, effort, subagent_model))
+    use mock <- decode.optional_field("mock", False, decode.bool)
+    use mock_scenario <- decode.optional_field(
+      "mock_scenario",
+      None,
+      decode.optional(decode.string),
+    )
+    decode.success(#(prompt, model, effort, subagent_model, mock, mock_scenario))
   }
   case decode.run(body, decoder) {
     Error(_) -> wisp.bad_request("Invalid request body")
-    Ok(#(prompt, model, effort, subagent_model)) ->
+    Ok(#(prompt, model, effort, subagent_model, mock, mock_scenario)) ->
       case projects.get(ctx.db, project_id) {
         Error(_) -> wisp.not_found()
         Ok(project) -> {
@@ -279,6 +285,8 @@ fn create(req: Request, ctx: Context, project_id: Int) -> Response {
               model,
               effort,
               subagent_model,
+              mock,
+              mock_scenario,
               now,
             )
           {

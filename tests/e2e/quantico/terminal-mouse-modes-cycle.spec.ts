@@ -14,8 +14,10 @@ test('mouse-modes-cycle: snapshot reload reproduces live state', async ({ page }
   const run = await createMockRun(page, { scenario: 'mouse-modes-cycle' });
   try {
     await run.waitForFinalState();
+    // 500ms settle so trailing BroadcastChunk messages drain before polling.
     await page.waitForTimeout(500);
     const marker = 'mouse modes start';
+    await run.waitForTerminalText(marker, { timeoutMs: 15_000 });
     const liveText = await run.terminalTextFrom(marker);
     expect(liveText).not.toBe('');
 

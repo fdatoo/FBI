@@ -131,6 +131,14 @@ jobs:
         # FileSystem watcher throws ENOENT if the dir doesn't exist.
         run: mkdir -p "$HOME/.claude"
 
+      - name: Pre-pull mock-run image
+        # do_mock_launch in src/server/src/fbi/run/worker.gleam creates
+        # containers from `ubuntu:24.04` directly. Docker's create endpoint
+        # does NOT auto-pull — if the image is missing it fails with 404.
+        # Pre-pulling here removes that race so the first few tests don't
+        # fail with "no such image" before the rest can use the cached layer.
+        run: docker pull ubuntu:24.04
+
       - name: Run e2e
         env:
           FBI_QUANTICO_BINARY_PATH: ${{ github.workspace }}/dist/cli/quantico-linux-amd64
@@ -141,6 +149,11 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: test-results
 
   image-scan:
     name: Trivy scan agent image

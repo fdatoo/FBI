@@ -10,12 +10,12 @@ test('auto-scroll: stays pinned during steady output', async ({ page }) => {
 
     // Manually scroll up: should stop pinning.
     await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="xterm-viewport"]') as HTMLElement;
+      const el = document.querySelector('.xterm-viewport') as HTMLElement;
       el.scrollTop = 0;
     });
     await page.waitForTimeout(2_000);
     const stillTop = await page.evaluate(() =>
-      (document.querySelector('[data-testid="xterm-viewport"]') as HTMLElement).scrollTop,
+      (document.querySelector('.xterm-viewport') as HTMLElement).scrollTop,
     );
     expect(stillTop).toBeLessThan(50);
 
@@ -26,13 +26,13 @@ test('auto-scroll: stays pinned during steady output', async ({ page }) => {
     // state; force a re-scroll to ensure we're observing the steady state
     // rather than racing the rebuild's render tick.
     await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="xterm-viewport"]') as HTMLElement;
+      const el = document.querySelector('.xterm-viewport') as HTMLElement;
       el.scrollTop = el.scrollHeight;
     });
     await page.waitForTimeout(2_000);
     // One more scroll-to-bottom kick to defeat the rebuild render-tick race.
     await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="xterm-viewport"]') as HTMLElement;
+      const el = document.querySelector('.xterm-viewport') as HTMLElement;
       el.scrollTop = el.scrollHeight;
     });
     await run.expectScrolledToBottom();

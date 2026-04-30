@@ -28,6 +28,8 @@ export default defineConfig({
       WEB_DIST_DIR: `${process.cwd()}/dist/web`,
       GIT_AUTHOR_NAME: 'E2E',
       GIT_AUTHOR_EMAIL: 'e2e@example.com',
+      FBI_QUANTICO_BINARY_PATH: process.env.FBI_QUANTICO_BINARY_PATH
+        ?? `${process.cwd()}/dist/cli/quantico-linux-${process.arch === 'arm64' ? 'arm64' : 'amd64'}`,
     },
   },
 });

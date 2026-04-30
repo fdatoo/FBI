@@ -14,8 +14,10 @@ test('scroll-region-stress: snapshot reload reproduces live state', async ({ pag
   const run = await createMockRun(page, { scenario: 'scroll-region-stress' });
   try {
     await run.waitForFinalState();
+    // 500ms settle so trailing BroadcastChunk messages drain before polling.
     await page.waitForTimeout(500);
     const marker = 'status line 1';
+    await run.waitForTerminalText(marker, { timeoutMs: 15_000 });
     const liveText = await run.terminalTextFrom(marker);
     expect(liveText).not.toBe('');
 

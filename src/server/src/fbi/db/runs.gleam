@@ -365,13 +365,15 @@ pub fn insert_run(
   model: Option(String),
   effort: Option(String),
   subagent_model: Option(String),
+  mock: Bool,
+  mock_scenario: Option(String),
   now: Int,
 ) -> Result(Run, DbError) {
   let branch_name = "claude/run-" <> int.to_string(now)
   let log_path = "/var/log/fbi/runs/" <> int.to_string(now) <> ".log"
   connection.query_one(
-    "INSERT INTO runs (project_id, prompt, branch_name, state, log_path, created_at, state_entered_at, model, effort, subagent_model)
-     VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?) RETURNING "
+    "INSERT INTO runs (project_id, prompt, branch_name, state, log_path, created_at, state_entered_at, model, effort, subagent_model, mock, mock_scenario)
+     VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "
       <> columns(),
     db,
     [
@@ -384,6 +386,11 @@ pub fn insert_run(
       nullable_opt(model),
       nullable_opt(effort),
       nullable_opt(subagent_model),
+      sqlight.int(case mock {
+        True -> 1
+        False -> 0
+      }),
+      nullable_opt(mock_scenario),
     ],
     decoder(),
   )
@@ -416,8 +423,8 @@ pub fn insert_continue_run(
   connection.query_one("INSERT INTO runs
        (project_id, prompt, branch_name, state, log_path, created_at,
         state_entered_at, model, effort, subagent_model,
-        parent_run_id, kind, kind_args_json)
-     VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?, 'continue', ?)
+        parent_run_id, kind, kind_args_json, mock, mock_scenario)
+     VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?, 'continue', ?, ?, ?)
      RETURNING " <> columns(), db, [
     sqlight.int(parent.project_id),
     sqlight.text(parent.prompt),
@@ -430,7 +437,44 @@ pub fn insert_continue_run(
     nullable_opt(effective_subagent),
     sqlight.int(parent.id),
     sqlight.text(args_json),
+    sqlight.int(case parent.mock {
+      True -> 1
+      False -> 0
+    }),
+    nullable_opt(parent.mock_scenario),
   ], decoder())
+}
+
+pub fn increment_resume_attempts(
+  db: sqlight.Connection,
+  id: Int,
+) -> Result(Run, DbError) {
+  connection.query_one(
+    "UPDATE runs SET resume_attempts = resume_attempts + 1 WHERE id = ? RETURNING "
+      <> columns(),
+    db,
+    [sqlight.int(id)],
+    decoder(),
+  )
+}
+
+/// Set claude_session_id only if currently NULL. Used when the actor sees the
+/// `/fbi-state/session-id` file dropped by quantico/supervisor.sh — needed for
+/// runs that signal awaiting_resume mid-flight (e.g. limit-breach + sleep_forever)
+/// before result.json gets written. Idempotent: a no-op if already set.
+pub fn set_session_id_if_null(
+  db: sqlight.Connection,
+  id: Int,
+  session_id: String,
+) -> Result(Nil, DbError) {
+  sqlight.query(
+    "UPDATE runs SET claude_session_id = ? WHERE id = ? AND claude_session_id IS NULL",
+    on: db,
+    with: [sqlight.text(session_id), sqlight.int(id)],
+    expecting: decode.at([0], decode.int),
+  )
+  |> result.map_error(SqlightError)
+  |> result.map(fn(_) { Nil })
 }
 
 pub fn mark_state(

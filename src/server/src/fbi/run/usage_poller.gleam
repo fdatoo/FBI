@@ -120,8 +120,12 @@ fn maybe_refresh_token(claude_dir: String) -> Nil {
                   wisp.log_warning(
                     "usage poller: token refresh failed: " <> reason,
                   )
-                Ok(#(new_access, new_refresh, expires_in)) -> {
+                Ok(#(new_access, raw_refresh, expires_in)) -> {
                   let new_expires = now_ms() + expires_in * 1000
+                  let new_refresh = case raw_refresh {
+                    "" -> creds.refresh_token
+                    r -> r
+                  }
                   let updated =
                     FullCredentials(
                       ..creds,

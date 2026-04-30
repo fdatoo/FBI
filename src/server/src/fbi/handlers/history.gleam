@@ -34,8 +34,7 @@ fn dispatch(req: Request, ctx: Context, run_id: Int) -> Response {
     Error(_) -> result_response(history_ops.Invalid(message: "missing op"))
     Ok(op) -> {
       case history_mutex.try_acquire(ctx.history_mutex, run_id) {
-        False ->
-          result_response(history_ops.Invalid(message: "agent-busy"))
+        False -> result_response(history_ops.Invalid(message: "agent-busy"))
         True -> {
           let outcome = run_op(ctx, run_id, op, body)
           history_mutex.release(ctx.history_mutex, run_id)
@@ -94,8 +93,7 @@ fn run_op(
           }
         "sync" ->
           case run.container_id {
-            None ->
-              history_ops.GitError(message: "container not running")
+            None -> history_ops.GitError(message: "container not running")
             Some(cid) ->
               case history_ops.sync_in_container(ctx.config, cid) {
                 Ok(o) -> dispatch_if_conflict(ctx, run, o)
@@ -111,14 +109,15 @@ fn run_op(
             )
             decode.success(strat)
           }
-          let strategy = case decode.run(body, strat_dec) |> result.unwrap("no-ff") {
+          let strategy = case
+            decode.run(body, strat_dec) |> result.unwrap("no-ff")
+          {
             "ff-only" -> history_ops.FfOnly
             "squash" -> history_ops.Squash
             _ -> history_ops.NoFf
           }
           case run.container_id {
-            None ->
-              history_ops.GitError(message: "container not running")
+            None -> history_ops.GitError(message: "container not running")
             Some(cid) ->
               case
                 history_ops.merge_in_container(
@@ -144,15 +143,11 @@ fn run_op(
           {
             history_ops.AgentDispatched(child_id) ->
               history_ops.Agent(child_run_id: child_id)
-            history_ops.AgentBusy ->
-              history_ops.Invalid(message: "agent-busy")
-            history_ops.DispatchError(m) ->
-              history_ops.GitError(message: m)
+            history_ops.AgentBusy -> history_ops.Invalid(message: "agent-busy")
+            history_ops.DispatchError(m) -> history_ops.GitError(message: m)
           }
         "push-submodule" ->
-          history_ops.Invalid(
-            message: "submodules not supported in this build",
-          )
+          history_ops.Invalid(message: "submodules not supported in this build")
         _ -> history_ops.Invalid(message: "unknown op: " <> op)
       }
     }
@@ -176,10 +171,8 @@ fn dispatch_if_conflict(
       {
         history_ops.AgentDispatched(child_id) ->
           history_ops.Conflict(child_run_id: child_id)
-        history_ops.AgentBusy ->
-          history_ops.Invalid(message: "agent-busy")
-        history_ops.DispatchError(m) ->
-          history_ops.GitError(message: m)
+        history_ops.AgentBusy -> history_ops.Invalid(message: "agent-busy")
+        history_ops.DispatchError(m) -> history_ops.GitError(message: m)
       }
     o -> o
   }

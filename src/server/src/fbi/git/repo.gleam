@@ -27,11 +27,13 @@ pub fn commits_on_branch(
   branch: String,
   base: String,
 ) -> Result(List(parse.LogEntry), GitError) {
-  use output <- result_map(git.run(repo_path, [
-    "log",
-    base <> ".." <> branch,
-    "--pretty=format:%H%x00%s%x00%ct",
-  ]))
+  use output <- result_map(
+    git.run(repo_path, [
+      "log",
+      base <> ".." <> branch,
+      "--pretty=format:%H%x00%s%x00%ct",
+    ]),
+  )
   parse.parse_log_porcelain(output)
 }
 
@@ -39,20 +41,24 @@ pub fn commit_files(
   repo_path: String,
   sha: String,
 ) -> Result(List(FileEntry), GitError) {
-  use ns_output <- result_try(git.run(repo_path, [
-    "show",
-    "--no-renames",
-    "--pretty=",
-    "--name-status",
-    sha,
-  ]))
-  use num_output <- result_try(git.run(repo_path, [
-    "show",
-    "--no-renames",
-    "--pretty=",
-    "--numstat",
-    sha,
-  ]))
+  use ns_output <- result_try(
+    git.run(repo_path, [
+      "show",
+      "--no-renames",
+      "--pretty=",
+      "--name-status",
+      sha,
+    ]),
+  )
+  use num_output <- result_try(
+    git.run(repo_path, [
+      "show",
+      "--no-renames",
+      "--pretty=",
+      "--numstat",
+      sha,
+    ]),
+  )
   let names = parse.parse_name_status(ns_output)
   let nums = parse.parse_numstat(num_output)
   Ok(merge_names_and_nums(names, nums))
@@ -67,14 +73,16 @@ pub fn file_diff(
     True -> sha <> "^"
     False -> empty_tree_sha
   }
-  use output <- result_try(git.run(repo_path, [
-    "diff",
-    "--no-color",
-    parent_arg,
-    sha,
-    "--",
-    path,
-  ]))
+  use output <- result_try(
+    git.run(repo_path, [
+      "diff",
+      "--no-color",
+      parent_arg,
+      sha,
+      "--",
+      path,
+    ]),
+  )
   let truncated = string.byte_size(output) > diff_byte_cap
   let body = case truncated {
     True -> string.slice(output, 0, diff_byte_cap)
@@ -88,16 +96,20 @@ pub fn branch_base_ahead_behind(
   branch: String,
   default: String,
 ) -> Result(BranchBase, GitError) {
-  use ahead_str <- result_try(git.run(repo_path, [
-    "rev-list",
-    "--count",
-    default <> ".." <> branch,
-  ]))
-  use behind_str <- result_try(git.run(repo_path, [
-    "rev-list",
-    "--count",
-    branch <> ".." <> default,
-  ]))
+  use ahead_str <- result_try(
+    git.run(repo_path, [
+      "rev-list",
+      "--count",
+      default <> ".." <> branch,
+    ]),
+  )
+  use behind_str <- result_try(
+    git.run(repo_path, [
+      "rev-list",
+      "--count",
+      branch <> ".." <> default,
+    ]),
+  )
   Ok(BranchBase(
     base: default,
     ahead: parse_int_first_line(ahead_str),
@@ -110,25 +122,31 @@ pub fn wip_files(repo_path: String) -> Result(Option(WipSnapshot), GitError) {
     Error(_) -> Ok(None)
     Ok(snapshot_str) -> {
       let snapshot_sha = string.trim(snapshot_str)
-      use parent_str <- result_try(git.run(repo_path, [
-        "rev-parse",
-        snapshot_sha <> "^",
-      ]))
+      use parent_str <- result_try(
+        git.run(repo_path, [
+          "rev-parse",
+          snapshot_sha <> "^",
+        ]),
+      )
       let parent_sha = string.trim(parent_str)
-      use ns_output <- result_try(git.run(repo_path, [
-        "diff",
-        "--no-renames",
-        "--name-status",
-        parent_sha,
-        snapshot_sha,
-      ]))
-      use num_output <- result_try(git.run(repo_path, [
-        "diff",
-        "--no-renames",
-        "--numstat",
-        parent_sha,
-        snapshot_sha,
-      ]))
+      use ns_output <- result_try(
+        git.run(repo_path, [
+          "diff",
+          "--no-renames",
+          "--name-status",
+          parent_sha,
+          snapshot_sha,
+        ]),
+      )
+      use num_output <- result_try(
+        git.run(repo_path, [
+          "diff",
+          "--no-renames",
+          "--numstat",
+          parent_sha,
+          snapshot_sha,
+        ]),
+      )
       let files =
         merge_names_and_nums(
           parse.parse_name_status(ns_output),
@@ -137,11 +155,13 @@ pub fn wip_files(repo_path: String) -> Result(Option(WipSnapshot), GitError) {
       case files {
         [] -> Ok(None)
         _ ->
-          Ok(Some(WipSnapshot(
-            snapshot_sha: snapshot_sha,
-            parent_sha: parent_sha,
-            files: files,
-          )))
+          Ok(
+            Some(WipSnapshot(
+              snapshot_sha: snapshot_sha,
+              parent_sha: parent_sha,
+              files: files,
+            )),
+          )
       }
     }
   }
@@ -155,14 +175,16 @@ pub fn wip_file_diff(
     Ok(None) -> Ok(None)
     Error(e) -> Error(e)
     Ok(Some(snap)) -> {
-      use output <- result_try(git.run(repo_path, [
-        "diff",
-        "--no-color",
-        snap.parent_sha,
-        snap.snapshot_sha,
-        "--",
-        path,
-      ]))
+      use output <- result_try(
+        git.run(repo_path, [
+          "diff",
+          "--no-color",
+          snap.parent_sha,
+          snap.snapshot_sha,
+          "--",
+          path,
+        ]),
+      )
       let truncated = string.byte_size(output) > diff_byte_cap
       let body = case truncated {
         True -> string.slice(output, 0, diff_byte_cap)

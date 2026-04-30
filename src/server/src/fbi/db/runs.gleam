@@ -1,11 +1,11 @@
 import fbi/db/connection.{type DbError, SqlightError}
 import gleam/dynamic/decode
-import simplifile
 import gleam/int
 import gleam/json
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
+import simplifile
 import sqlight
 
 pub type Run {
@@ -620,25 +620,20 @@ fn insert_child_run(
   now: Int,
 ) -> Result(Run, DbError) {
   let log_path = "/var/log/fbi/runs/" <> int.to_string(now) <> ".log"
-  connection.query_one(
-    "INSERT INTO runs
+  connection.query_one("INSERT INTO runs
        (project_id, prompt, branch_name, state, log_path, created_at,
         state_entered_at, parent_run_id, kind)
      VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?)
-     RETURNING " <> columns(),
-    db,
-    [
-      sqlight.int(parent.project_id),
-      sqlight.text(prompt),
-      sqlight.text(parent.branch_name),
-      sqlight.text(log_path),
-      sqlight.int(now),
-      sqlight.int(now),
-      sqlight.int(parent.id),
-      sqlight.text(kind),
-    ],
-    decoder(),
-  )
+     RETURNING " <> columns(), db, [
+    sqlight.int(parent.project_id),
+    sqlight.text(prompt),
+    sqlight.text(parent.branch_name),
+    sqlight.text(log_path),
+    sqlight.int(now),
+    sqlight.int(now),
+    sqlight.int(parent.id),
+    sqlight.text(kind),
+  ], decoder())
 }
 
 pub fn count_active_children(

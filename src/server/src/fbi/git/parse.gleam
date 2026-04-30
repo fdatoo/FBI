@@ -182,8 +182,7 @@ fn parse_status_record(rec: String) -> Result(StatusEntry, Nil) {
     "" -> Error(Nil)
     _ ->
       case string.first(rec) {
-        Ok("?") ->
-          Ok(StatusEntry(status: "U", path: string.drop_start(rec, 1)))
+        Ok("?") -> Ok(StatusEntry(status: "U", path: string.drop_start(rec, 1)))
         Ok("1") -> parse_v2_ordinary(rec)
         Ok("2") -> parse_v2_rename(rec)
         Ok("u") -> parse_v2_unmerged(rec)

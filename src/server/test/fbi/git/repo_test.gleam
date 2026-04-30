@@ -28,8 +28,7 @@ fn seed_bare_repo() -> #(String, String) {
   let assert Ok(_) = git.run(work, ["branch", "-M", "main"])
   let assert Ok(_) = git.run(work, ["remote", "add", "bare", bare])
   let assert Ok(_) = git.run(work, ["push", "bare", "main"])
-  let assert Ok(_) =
-    git.run(bare, ["symbolic-ref", "HEAD", "refs/heads/main"])
+  let assert Ok(_) = git.run(bare, ["symbolic-ref", "HEAD", "refs/heads/main"])
   let assert Ok(sha) = git.run(work, ["rev-parse", "HEAD"])
   let sha_trimmed = string.trim(sha)
   #(bare, sha_trimmed)
@@ -81,8 +80,7 @@ pub fn branch_base_ahead_behind_test() {
   let assert Ok(_) = git.run(work2, ["add", "b.txt"])
   let assert Ok(_) = git.run(work2, ["commit", "-m", "feature commit"])
   let assert Ok(_) = git.run(work2, ["push", "origin", "feature"])
-  let assert Ok(result) =
-    repo.branch_base_ahead_behind(bare, "feature", "main")
+  let assert Ok(result) = repo.branch_base_ahead_behind(bare, "feature", "main")
   result.base |> should.equal("main")
   result.ahead |> should.equal(1)
   result.behind |> should.equal(0)

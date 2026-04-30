@@ -2,8 +2,8 @@ import fbi/context.{type Context}
 import fbi/handlers/changes as changes_handler
 import fbi/handlers/config as config_handler
 import fbi/handlers/github as github_handler
-import fbi/handlers/history as history_handler
 import fbi/handlers/health
+import fbi/handlers/history as history_handler
 import fbi/handlers/listening_ports as listening_ports_handler
 import fbi/handlers/mcp_servers as mcp_servers_handler
 import fbi/handlers/projects as projects_handler
@@ -71,8 +71,7 @@ pub fn handle(req: Request, ctx: Context) -> Response {
       changes_handler.handle_changes(req, ctx, id)
     ["api", "runs", id, "file-diff"] ->
       changes_handler.handle_file_diff(req, ctx, id)
-    ["api", "runs", id, "history"] ->
-      history_handler.handle(req, ctx, id)
+    ["api", "runs", id, "history"] -> history_handler.handle(req, ctx, id)
     ["api", "runs", id, "commits", sha, "files"] ->
       changes_handler.handle_commit_files(req, ctx, id, sha)
     ["api", "runs", id, "submodule", path, "commits", sha, "files"] ->

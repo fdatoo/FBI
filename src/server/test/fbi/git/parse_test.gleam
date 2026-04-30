@@ -8,7 +8,11 @@ pub fn parse_log_porcelain_two_commits_test() {
   let parsed = parse.parse_log_porcelain(input)
   parsed
   |> should.equal([
-    parse.LogEntry(sha: "abc123", subject: "first commit", committed_at: 1_700_000_001),
+    parse.LogEntry(
+      sha: "abc123",
+      subject: "first commit",
+      committed_at: 1_700_000_001,
+    ),
     parse.LogEntry(
       sha: "de4567",
       subject: "second commit",
@@ -99,10 +103,7 @@ pub fn parse_diff_hunks_multiple_hunks_test() {
 
 pub fn parse_diff_hunks_no_newline_marker_test() {
   let input =
-    "@@ -1 +1 @@\n"
-    <> "-a\n"
-    <> "\\ No newline at end of file\n"
-    <> "+b\n"
+    "@@ -1 +1 @@\n" <> "-a\n" <> "\\ No newline at end of file\n" <> "+b\n"
   let hunks = parse.parse_diff_hunks(input)
   let assert [hunk] = hunks
   hunk.lines

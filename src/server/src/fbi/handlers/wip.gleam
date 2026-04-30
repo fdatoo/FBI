@@ -154,8 +154,7 @@ fn with_repo_path(
       case runs_db.get(ctx.db, id) {
         Error(_) -> wisp.not_found()
         Ok(run) -> {
-          let path =
-            ctx.config.runs_dir <> "/" <> int.to_string(id) <> "/wip"
+          let path = ctx.config.runs_dir <> "/" <> int.to_string(id) <> "/wip"
           next(run, path)
         }
       }

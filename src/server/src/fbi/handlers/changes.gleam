@@ -47,8 +47,7 @@ fn serve_changes(ctx: Context, run_id: Int) -> Response {
         Ok(option.Some(snap)) -> snap.files
         _ -> []
       }
-      let children =
-        runs_db.children_of(ctx.db, run_id) |> result.unwrap([])
+      let children = runs_db.children_of(ctx.db, run_id) |> result.unwrap([])
       json.object([
         #("branch_name", json.string(branch)),
         #("branch_base", encode_branch_base(base)),
@@ -87,8 +86,7 @@ pub fn handle_commit_files(
 }
 
 fn serve_commit_files(ctx: Context, run_id: Int, sha: String) -> Response {
-  let repo_path =
-    ctx.config.runs_dir <> "/" <> int.to_string(run_id) <> "/wip"
+  let repo_path = ctx.config.runs_dir <> "/" <> int.to_string(run_id) <> "/wip"
   case runs_db.get(ctx.db, run_id) {
     Error(_) -> wisp.not_found()
     Ok(_) ->
@@ -118,7 +116,11 @@ pub fn handle_submodule_commit_files(
   }
 }
 
-pub fn handle_file_diff(req: Request, ctx: Context, id_str: String) -> Response {
+pub fn handle_file_diff(
+  req: Request,
+  ctx: Context,
+  id_str: String,
+) -> Response {
   case req.method {
     http.Get ->
       case int.parse(id_str) {
@@ -133,8 +135,7 @@ fn serve_file_diff(req: Request, ctx: Context, run_id: Int) -> Response {
   let qs = wisp.get_query(req)
   let path = list.key_find(qs, "path") |> result.unwrap("")
   let ref = list.key_find(qs, "ref") |> result.unwrap("worktree")
-  let repo_path =
-    ctx.config.runs_dir <> "/" <> int.to_string(run_id) <> "/wip"
+  let repo_path = ctx.config.runs_dir <> "/" <> int.to_string(run_id) <> "/wip"
   case path {
     "" -> wisp.bad_request("path is required")
     _ ->

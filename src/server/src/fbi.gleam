@@ -3,10 +3,10 @@ import fbi/config
 import fbi/context.{Context}
 import fbi/db/connection
 import fbi/db/migrations
+import fbi/git/mutex as history_mutex
 import fbi/handlers/shell_ws
 import fbi/handlers/states_ws
 import fbi/handlers/usage_ws
-import fbi/git/mutex as history_mutex
 import fbi/pubsub
 import fbi/router
 import fbi/run/gc_scheduler

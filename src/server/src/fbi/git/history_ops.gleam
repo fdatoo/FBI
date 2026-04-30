@@ -46,11 +46,13 @@ pub fn squash_local(
     git.run(repo_path, ["commit-tree", tree, "-p", base_sha, "-m", subject])
     |> result.map(string.trim),
   )
-  use _ <- result_try(git.run(repo_path, [
-    "update-ref",
-    "refs/heads/" <> branch,
-    new_commit,
-  ]))
+  use _ <- result_try(
+    git.run(repo_path, [
+      "update-ref",
+      "refs/heads/" <> branch,
+      new_commit,
+    ]),
+  )
   Ok(Complete(sha: new_commit))
 }
 
@@ -61,11 +63,13 @@ pub fn mirror_rebase(
   remote_branch: String,
 ) -> Result(Outcome, GitError) {
   use _ <- result_try(git.run(repo_path, ["fetch", remote, remote_branch]))
-  use _ <- result_try(git.run(repo_path, [
-    "update-ref",
-    "refs/heads/" <> remote_branch,
-    "FETCH_HEAD",
-  ]))
+  use _ <- result_try(
+    git.run(repo_path, [
+      "update-ref",
+      "refs/heads/" <> remote_branch,
+      "FETCH_HEAD",
+    ]),
+  )
   case
     git.run(repo_path, [
       "merge-base",
@@ -220,10 +224,7 @@ fn rev_parse(repo_path: String, ref: String) -> Result(String, GitError) {
   Ok(string.trim(s))
 }
 
-fn result_try(
-  r: Result(a, e),
-  f: fn(a) -> Result(b, e),
-) -> Result(b, e) {
+fn result_try(r: Result(a, e), f: fn(a) -> Result(b, e)) -> Result(b, e) {
   case r {
     Ok(v) -> f(v)
     Error(e) -> Error(e)

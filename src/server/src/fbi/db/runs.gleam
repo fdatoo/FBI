@@ -5,6 +5,7 @@ import gleam/json
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
+import simplifile
 import sqlight
 
 pub type Run {
@@ -570,4 +571,92 @@ fn nullable_opt(opt: Option(String)) -> sqlight.Value {
     option.None -> sqlight.null()
     option.Some(v) -> sqlight.text(v)
   }
+}
+
+pub type ChildSummary {
+  ChildSummary(id: Int, kind: String, state: String, created_at: Int)
+}
+
+pub fn children_of(
+  db: sqlight.Connection,
+  run_id: Int,
+) -> Result(List(ChildSummary), DbError) {
+  let dec = {
+    use id <- decode.field(0, decode.int)
+    use kind <- decode.field(1, decode.string)
+    use state <- decode.field(2, decode.string)
+    use created_at <- decode.field(3, decode.int)
+    decode.success(ChildSummary(id, kind, state, created_at))
+  }
+  connection.query_all(
+    "SELECT id, kind, state, created_at FROM runs WHERE parent_run_id = ? ORDER BY created_at",
+    db,
+    [sqlight.int(run_id)],
+    dec,
+  )
+}
+
+pub fn insert_polish_run(
+  db: sqlight.Connection,
+  parent: Run,
+  now: Int,
+) -> Result(Run, DbError) {
+  insert_child_run(db, parent, "polish", read_polish_prompt(), now)
+}
+
+pub fn insert_merge_conflict_run(
+  db: sqlight.Connection,
+  parent: Run,
+  now: Int,
+) -> Result(Run, DbError) {
+  insert_child_run(db, parent, "merge-conflict", merge_conflict_prompt(), now)
+}
+
+fn insert_child_run(
+  db: sqlight.Connection,
+  parent: Run,
+  kind: String,
+  prompt: String,
+  now: Int,
+) -> Result(Run, DbError) {
+  let log_path = "/var/log/fbi/runs/" <> int.to_string(now) <> ".log"
+  connection.query_one("INSERT INTO runs
+       (project_id, prompt, branch_name, state, log_path, created_at,
+        state_entered_at, parent_run_id, kind)
+     VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?)
+     RETURNING " <> columns(), db, [
+    sqlight.int(parent.project_id),
+    sqlight.text(prompt),
+    sqlight.text(parent.branch_name),
+    sqlight.text(log_path),
+    sqlight.int(now),
+    sqlight.int(now),
+    sqlight.int(parent.id),
+    sqlight.text(kind),
+  ], decoder())
+}
+
+pub fn count_active_children(
+  db: sqlight.Connection,
+  parent_id: Int,
+) -> Result(Int, DbError) {
+  connection.query_one(
+    "SELECT COUNT(*) FROM runs
+     WHERE parent_run_id = ?
+       AND state IN ('queued', 'running', 'waiting', 'awaiting_resume')",
+    db,
+    [sqlight.int(parent_id)],
+    decode.at([0], decode.int),
+  )
+}
+
+fn read_polish_prompt() -> String {
+  case simplifile.read("priv/static/polish-prompt.txt") {
+    Ok(s) -> s
+    Error(_) -> "Polish the most recent commits on this branch."
+  }
+}
+
+fn merge_conflict_prompt() -> String {
+  "Resolve the merge conflicts in /workspace, then commit the resolution. The conflicts were left in place by an automated merge or rebase."
 }

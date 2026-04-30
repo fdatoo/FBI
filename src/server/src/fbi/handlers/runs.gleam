@@ -2,6 +2,7 @@ import fbi/context.{type Context}
 import fbi/db/connection
 import fbi/db/projects
 import fbi/db/runs
+import fbi/db/settings
 import fbi/json/run as run_json
 import fbi/run/reattach as run_reattach
 import fbi/run/registry as run_registry
@@ -14,7 +15,7 @@ import gleam/http
 import gleam/int
 import gleam/json
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import wisp.{type Request, type Response}
 
 pub fn handle_list(req: Request, ctx: Context) -> Response {
@@ -181,6 +182,10 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
                           wisp.internal_server_error()
                         }
                         Ok(#(actor_subject, bc)) -> {
+                          let global_prompt = case settings.get(ctx.db) {
+                            Ok(s) -> s.global_prompt
+                            Error(_) -> ""
+                          }
                           run_worker.launch(
                             run_worker.LaunchInput(
                               run: new_run,
@@ -189,6 +194,7 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
                               cols: 80,
                               rows: 24,
                               broadcaster: bc,
+                              global_prompt: global_prompt,
                             ),
                             actor_subject,
                           )
@@ -247,6 +253,11 @@ fn create(req: Request, ctx: Context, project_id: Int) -> Response {
   use body <- wisp.require_json(req)
   let decoder = {
     use prompt <- decode.field("prompt", decode.string)
+    use branch <- decode.optional_field(
+      "branch",
+      None,
+      decode.optional(decode.string),
+    )
     use model <- decode.optional_field(
       "model",
       None,
@@ -268,70 +279,146 @@ fn create(req: Request, ctx: Context, project_id: Int) -> Response {
       None,
       decode.optional(decode.string),
     )
-    decode.success(#(prompt, model, effort, subagent_model, mock, mock_scenario))
+    use force <- decode.optional_field("force", False, decode.bool)
+    decode.success(#(
+      prompt,
+      branch,
+      model,
+      effort,
+      subagent_model,
+      mock,
+      mock_scenario,
+      force,
+    ))
   }
   case decode.run(body, decoder) {
     Error(_) -> wisp.bad_request("Invalid request body")
-    Ok(#(prompt, model, effort, subagent_model, mock, mock_scenario)) ->
+    Ok(#(
+      prompt,
+      branch,
+      model,
+      effort,
+      subagent_model,
+      mock,
+      mock_scenario,
+      force,
+    )) ->
       case projects.get(ctx.db, project_id) {
         Error(_) -> wisp.not_found()
-        Ok(project) -> {
-          let now = now_ms()
-          case
-            runs.insert_run(
-              ctx.db,
-              project_id,
-              prompt,
-              model,
-              effort,
-              subagent_model,
-              mock,
-              mock_scenario,
-              now,
-            )
-          {
-            Error(e) -> {
-              wisp.log_error(
-                "insert run for project "
-                <> int.to_string(project_id)
-                <> ": "
-                <> connection.describe_error(e),
-              )
-              wisp.internal_server_error()
-            }
-            Ok(run) ->
-              case
-                run_supervisor.start_run(
-                  ctx.run_registry,
-                  ctx.db,
-                  ctx.config,
-                  run.id,
-                )
-              {
-                Error(reason) -> {
-                  wisp.log_error(
-                    "start run " <> int.to_string(run.id) <> ": " <> reason,
-                  )
-                  wisp.internal_server_error()
-                }
-                Ok(#(actor_subject, bc)) -> {
-                  run_worker.launch(
-                    run_worker.LaunchInput(
-                      run: run,
-                      project: project,
-                      config: ctx.config,
-                      cols: 80,
-                      rows: 24,
-                      broadcaster: bc,
+        Ok(project) ->
+          case branch, force {
+            Some(b), False ->
+              case runs.branch_in_use(ctx.db, b) {
+                Error(_) -> wisp.internal_server_error()
+                Ok(True) ->
+                  json.object([
+                    #("error", json.string("branch_in_use")),
+                    #(
+                      "message",
+                      json.string(
+                        "Branch '"
+                        <> b
+                        <> "' is already in use by an active run.",
+                      ),
                     ),
-                    actor_subject,
-                  )
-                  run_json.encode(run)
+                  ])
                   |> json.to_string()
-                  |> wisp.json_response(201)
-                }
+                  |> wisp.json_response(409)
+                Ok(False) ->
+                  do_create(
+                    ctx,
+                    project,
+                    prompt,
+                    branch,
+                    model,
+                    effort,
+                    subagent_model,
+                    mock,
+                    mock_scenario,
+                  )
               }
+            _, _ ->
+              do_create(
+                ctx,
+                project,
+                prompt,
+                branch,
+                model,
+                effort,
+                subagent_model,
+                mock,
+                mock_scenario,
+              )
           }
+      }
+  }
+}
+
+fn do_create(
+  ctx: Context,
+  project: projects.Project,
+  prompt: String,
+  branch: option.Option(String),
+  model: option.Option(String),
+  effort: option.Option(String),
+  subagent_model: option.Option(String),
+  mock: Bool,
+  mock_scenario: option.Option(String),
+) -> Response {
+  let now = now_ms()
+  let global_prompt = case settings.get(ctx.db) {
+    Ok(s) -> s.global_prompt
+    Error(_) -> ""
+  }
+  case
+    runs.insert_run(
+      ctx.db,
+      project.id,
+      prompt,
+      branch,
+      model,
+      effort,
+      subagent_model,
+      mock,
+      mock_scenario,
+      now,
+    )
+  {
+    Error(e) -> {
+      wisp.log_error(
+        "insert run for project "
+        <> int.to_string(project.id)
+        <> ": "
+        <> connection.describe_error(e),
+      )
+      wisp.internal_server_error()
+    }
+    Ok(run) ->
+      case
+        run_supervisor.start_run(ctx.run_registry, ctx.db, ctx.config, run.id)
+      {
+        Error(reason) -> {
+          wisp.log_error(
+            "start run " <> int.to_string(run.id) <> ": " <> reason,
+          )
+          wisp.internal_server_error()
+        }
+        Ok(#(actor_subject, bc)) -> {
+          run_worker.launch(
+            run_worker.LaunchInput(
+              run: run,
+              project: project,
+              config: ctx.config,
+              cols: 80,
+              rows: 24,
+              broadcaster: bc,
+              global_prompt: global_prompt,
+            ),
+            actor_subject,
+          )
+          run_json.encode(run)
+          |> json.to_string()
+          |> wisp.json_response(201)
         }
       }
   }

@@ -1,0 +1,19 @@
+[package]
+name = "quantico"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "quantico"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"

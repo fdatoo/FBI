@@ -1,0 +1,4 @@
+name: crash-fast
+steps:
+  - emit: "Quick crash.\n"
+  - exit: 1

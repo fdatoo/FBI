@@ -1,0 +1,25 @@
+[1;36m●[0m [1mRead[0m(src/index.ts)
+[2m  > 200 lines[0m
+[1;36m●[0m [1mBash[0m([33m$ rg --files-with-matches 'thing'[0m)
+[2m  src/index.ts[0m
+[1;36m●[0m [1mRead[0m(src/utils.ts)
+[2m  > 85 lines[0m
+[1;36m●[0m [1mBash[0m([33m$ git log --oneline -10[0m)
+[2m  abc1234 fix: previous commit[0m
+[1;36m●[0m [1mRead[0m(package.json)
+[2m  > 42 lines[0m
+[1;36m●[0m [1mBash[0m([33m$ npm test -- --passWithNoTests[0m)
+[2m  > Tests: 12 passed[0m
+[1;36m●[0m [1mWrite[0m(src/output.ts)
+[2m  > written 55 lines[0m
+[1;36m●[0m [1mBash[0m([33m$ tsc --noEmit[0m)
+[2m  > 0 errors[0m
+[1;36m●[0m [1mRead[0m(src/types.ts)
+[2m  > 120 lines[0m
+[1;36m●[0m [1mBash[0m([33m$ rg -n 'export interface' src/[0m)
+[2m  src/types.ts:5:export interface Config[0m
+[1;36m●[0m [1mWrite[0m(src/index.ts)
+[2m  > written 215 lines[0m
+[1;36m●[0m [1mBash[0m([33m$ git diff --stat[0m)
+[2m  2 files changed, 30 insertions(+), 5 deletions(-)[0m
+Done.

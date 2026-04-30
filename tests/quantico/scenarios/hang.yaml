@@ -1,0 +1,4 @@
+name: hang
+steps:
+  - emit: "Hanging now.\n"
+  - sleep_forever: true

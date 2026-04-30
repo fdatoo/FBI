@@ -1,0 +1,35 @@
+CREATE TABLE runs (
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  prompt TEXT NOT NULL,
+  branch_name TEXT NOT NULL,
+  state TEXT NOT NULL,
+  container_id TEXT,
+  log_path TEXT NOT NULL,
+  exit_code INTEGER,
+  error TEXT,
+  head_commit TEXT,
+  started_at INTEGER,
+  finished_at INTEGER,
+  created_at INTEGER NOT NULL,
+  state_entered_at INTEGER NOT NULL DEFAULT 0,
+  model TEXT,
+  effort TEXT,
+  subagent_model TEXT,
+  resume_attempts INTEGER NOT NULL DEFAULT 0,
+  next_resume_at INTEGER,
+  claude_session_id TEXT,
+  last_limit_reset_at INTEGER,
+  tokens_input INTEGER NOT NULL DEFAULT 0,
+  tokens_output INTEGER NOT NULL DEFAULT 0,
+  tokens_cache_read INTEGER NOT NULL DEFAULT 0,
+  tokens_cache_create INTEGER NOT NULL DEFAULT 0,
+  tokens_total INTEGER NOT NULL DEFAULT 0,
+  usage_parse_errors INTEGER NOT NULL DEFAULT 0,
+  title TEXT,
+  title_locked INTEGER NOT NULL DEFAULT 0,
+  parent_run_id INTEGER REFERENCES runs(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_runs_project ON runs (project_id);
+CREATE INDEX idx_runs_state ON runs (state);
+CREATE INDEX idx_runs_parent ON runs (parent_run_id);

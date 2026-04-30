@@ -1,0 +1,3 @@
+[workspace]
+members = ["src/desktop", "src/fbi-tunnel", "src/fbi-term-core", "tests/quantico"]
+resolver = "2"

@@ -1,0 +1,13 @@
+name: resume-aware
+steps:
+  - emit: "Running scenario 'resume-aware'.\n"
+  - emit: "(if launched with --resume, main.rs already printed the resume marker before this scenario started)\n"
+  # write_jsonl creates a session JSONL file under HOME/.claude/projects/...
+  # which the orchestrator's scan_session_id captures so the continue/auto-
+  # resume path has a session_id to pass back via FBI_RESUME_SESSION_ID.
+  # Without this the second container's claude --resume would error out
+  # with "session not found" — and the resume-aware test would never see
+  # quantico's "[quantico] resumed from" marker.
+  - write_jsonl: { type: "user", content: "resume-aware initial step" }
+  - emit: "Done.\n"
+  - exit: 0

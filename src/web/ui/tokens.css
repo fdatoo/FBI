@@ -1,0 +1,133 @@
+/* Design tokens — see docs/superpowers/specs/2026-04-22-fbi-ui-redesign-design.md */
+
+:root {
+  /* color — dark (default) */
+  --bg: #0b0f14;
+  --surface: #0a1218;
+  --surface-raised: #0c1722;
+  --surface-sunken: #060a0f;
+  --border: #15212d;
+  --border-strong: #1e2a36;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-faint: #64748b;
+  --accent: #38bdf8;
+  --accent-strong: #7dd3fc;
+  --accent-subtle: #082f49;
+  --ok: #34d399;
+  --ok-subtle: #042f2e;
+  --run: #38bdf8;
+  --run-subtle: #082f49;
+  --fail: #f87171;
+  --fail-subtle: #450a0a;
+  --warn: #fbbf24;
+  --warn-subtle: #2d1c07;
+  --attn: #fbbf24;
+  --attn-subtle: #2a1c07;
+  --focus-ring: #38bdf866;
+
+  /* typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+  /* radii */
+  --r-sm: 3px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-xl: 12px;
+
+  /* spacing */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  /* shadows */
+  --shadow-focus: 0 0 0 2px var(--focus-ring);
+  --shadow-card: none;
+  --shadow-popover: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+
+  /* motion */
+  --d-fast: 120ms;
+  --d-base: 180ms;
+  --d-slow: 320ms;
+  --e-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --e-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* z */
+  --z-statusbar: 10;
+  --z-sidebar: 20;
+  --z-topbar: 30;
+  --z-drawer: 40;
+  --z-dialog: 50;
+  --z-palette: 60;
+  --z-toast: 70;
+
+  --terminal-bg: #060a0f;
+  --terminal-fg: #e2e8f0;
+
+  /* macOS traffic light colours — fixed, not theme-dependent */
+  --traffic-red: #FF5F56;
+  --traffic-yellow: #FFBD2E;
+  --traffic-green: #27C93F;
+
+  color-scheme: dark;
+}
+
+:root.light {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-raised: #f1f5f9;
+  --surface-sunken: #eef2f7;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-dim: #475569;
+  --text-faint: #64748b;
+  --accent: #0284c7;
+  --accent-strong: #0369a1;
+  --accent-subtle: #e0f2fe;
+  --ok: #047857;
+  --ok-subtle: #ecfdf5;
+  --run: #0284c7;
+  --run-subtle: #e0f2fe;
+  --fail: #b91c1c;
+  --fail-subtle: #fef2f2;
+  --warn: #b45309;
+  --warn-subtle: #fffbeb;
+  --attn: #b45309;
+  --attn-subtle: #fffbeb;
+  --focus-ring: #0284c766;
+
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  --shadow-popover: 0 10px 30px -8px rgba(15, 23, 42, 0.14), 0 4px 10px -4px rgba(15, 23, 42, 0.08);
+
+  --terminal-bg: var(--surface-sunken);
+  --terminal-fg: var(--text);
+
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --d-fast: 0ms;
+    --d-base: 0ms;
+    --d-slow: 0ms;
+  }
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 23px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+*:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

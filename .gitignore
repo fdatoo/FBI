@@ -1,0 +1,36 @@
+.env
+
+node_modules
+cli/fbi-term-core/tests/support/node_modules
+dist
+*.log
+!src/**/__fixtures__/**/*.log
+.DS_Store
+.env
+.env.local
+/var
+*.tsbuildinfo
+coverage
+.worktrees/
+.playwright-mcp/
+src/desktop/binaries/fbi-tunnel-*
+src/desktop/gen/
+cli/quantico/dist/
+target/
+test-results/
+playwright-report/
+
+# Claude / Superpowers
+.claude/
+.superpowers/
+
+# Elixir / Mix
+src/server/_build/
+src/server/deps/
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+.playwright-cli/

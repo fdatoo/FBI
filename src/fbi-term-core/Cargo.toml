@@ -1,0 +1,15 @@
+[package]
+name = "fbi_term_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "fbi_term_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rustler = "0.32"
+alacritty_terminal = "0.26"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+

@@ -1,0 +1,6 @@
+{
+  "limit_message_template": "Claude usage limit reached|<EPOCH>",
+  "limit_message_human_template": "Claude usage limit reached. Your limit will reset at <TIME>.",
+  "session_jsonl_path_pattern": "$HOME/.claude/projects/<encoded-cwd>/<uuid>.jsonl",
+  "jsonl_required_fields": ["type", "timestamp"]
+}

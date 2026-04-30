@@ -1,0 +1,13 @@
+name: cursor-styles
+steps:
+  - emit_ansi: "\x1b[?25l"
+  - emit_ansi: "cursor hidden\r\n"
+  - sleep_ms: 30
+  - emit_ansi: "\x1b[?25h"
+  - emit_ansi: "\x1b[5 q"
+  - emit_ansi: "\x1b[1 q"
+  - emit_ansi: "\x1b7"
+  - emit_ansi: "\x1b[10;5Hsaved here"
+  - emit_ansi: "\x1b8"
+  - emit_ansi: "\r\nback at saved cursor\r\n"
+  - exit: 0

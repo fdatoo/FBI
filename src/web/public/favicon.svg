@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .cursor { fill: #0C0F26; filter: none; }
+      .ghost  { fill: #0C0F26; opacity: 0.35; filter: none; }
+      @media (prefers-color-scheme: dark) {
+        .cursor { fill: #E8F0FF; filter: url(#glow); }
+        .ghost  { fill: #A0B8FF; opacity: 0.45; filter: url(#glow); }
+      }
+    </style>
+  </defs>
+  <!-- ghost cursor -->
+  <rect class="ghost" x="15" y="4" width="6" height="10"/>
+  <!-- main cursor -->
+  <rect class="cursor" x="5" y="9" width="9" height="14"/>
+</svg>

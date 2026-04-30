@@ -1,0 +1,10 @@
+{
+  "scenarios": [
+    "default", "chatty", "limit-breach", "limit-breach-human",
+    "crash-fast", "hang", "garbled", "slow-startup",
+    "env-echo", "resume-aware", "tool-heavy", "plugin-fail",
+    "alt-screen-cycle", "scroll-region-stress", "mouse-modes-cycle",
+    "cjk-wide", "truecolor", "bracketed-paste-cycle", "cursor-styles",
+    "scrollback-stress"
+  ]
+}

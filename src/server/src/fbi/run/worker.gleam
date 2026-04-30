@@ -265,6 +265,7 @@ fn build_env(input: LaunchInput) -> List(String) {
       input.config.git_author_email,
     ),
     "FBI_BRANCH=" <> input.run.branch_name,
+    "FBI_KIND=" <> input.run.kind,
     "IS_SANDBOX=1",
   ]
   let with_model = list.append(base, model_env(input.run))
@@ -312,6 +313,10 @@ fn build_binds(input: LaunchInput) -> List(String) {
     run_dir
       <> "/scripts/finalizeBranch.sh:/usr/local/bin/fbi-finalize-branch.sh:ro",
     run_dir <> "/scripts/fbi-history-op.sh:/usr/local/bin/fbi-history-op.sh:ro",
+    run_dir
+      <> "/scripts/wip-snapshotter.sh:/usr/local/bin/fbi-wip-snapshotter.sh:ro",
+    run_dir
+      <> "/scripts/polish-prompt.txt:/usr/local/share/fbi/polish-prompt.txt:ro",
     run_dir <> "/wip:/safeguard:rw",
     run_dir <> "/state:/fbi-state:rw",
     run_dir <> "/mount:/home/agent/.claude/projects/:rw",
@@ -433,10 +438,18 @@ fn setup_run_dir(input: LaunchInput) -> Result(Nil, String) {
     fbi_priv_path("static/finalizeBranch.sh"),
     scripts_dir <> "/finalizeBranch.sh",
   ))
-  copy_script(
+  use _ <- result.try(copy_script(
     fbi_priv_path("static/fbi-history-op.sh"),
     scripts_dir <> "/fbi-history-op.sh",
-  )
+  ))
+  use _ <- result.try(copy_script(
+    fbi_priv_path("static/wip-snapshotter.sh"),
+    scripts_dir <> "/wip-snapshotter.sh",
+  ))
+  let polish_src = fbi_priv_path("static/polish-prompt.txt")
+  let polish_dst = scripts_dir <> "/polish-prompt.txt"
+  let _ = simplifile.copy_file(polish_src, polish_dst)
+  Ok(Nil)
 }
 
 @external(erlang, "fbi_priv", "path")

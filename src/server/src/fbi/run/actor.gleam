@@ -190,18 +190,37 @@ fn handle(state: State, msg: RunMsg) -> actor.Next(State, RunMsg) {
     Running(cid, _, bc, _, _), ContainerExited(outcome) ->
       transition_to_waiting(state, cid, bc, outcome)
     Running(cid, _, _, _, _), Cancel -> {
+      debug_log("CANCEL run=" <> int.to_string(state.run_id) <> " cid=" <> cid)
       case docker.connect(state.config.docker_socket) {
         Ok(sock) -> {
-          let _ = docker.kill_container(sock, cid)
+          let kill_result = docker.kill_container(sock, cid)
           docker.close(sock)
+          debug_log(
+            "CANCEL_KILLED run="
+            <> int.to_string(state.run_id)
+            <> " cid="
+            <> cid
+            <> " result="
+            <> case kill_result {
+              Ok(_) -> "ok"
+              Error(e) -> "err:" <> docker.describe_error(e)
+            },
+          )
         }
-        Error(e) ->
+        Error(e) -> {
           wisp.log_warning(
             "run "
             <> int.to_string(state.run_id)
             <> " cancel connect failed: "
             <> docker.describe_error(e),
           )
+          debug_log(
+            "CANCEL_CONNECT_FAILED run="
+            <> int.to_string(state.run_id)
+            <> " err="
+            <> docker.describe_error(e),
+          )
+        }
       }
       actor.continue(state)
     }
@@ -296,6 +315,19 @@ fn transition_to_waiting(
     <> int.to_string(state.run_id)
     <> " finished exit_code="
     <> int.to_string(outcome.exit_code),
+  )
+  debug_log(
+    "TRANSITION_TO_WAITING run="
+    <> int.to_string(state.run_id)
+    <> " cid="
+    <> cid
+    <> " exit_code="
+    <> int.to_string(outcome.exit_code)
+    <> " err="
+    <> case outcome.error_message {
+      None -> "none"
+      Some(e) -> e
+    },
   )
   let db_outcome =
     runs_db.RunOutcome(
@@ -417,3 +449,13 @@ fn transcript_size(config: Config, run_id: Int) -> Int {
 
 @external(erlang, "fbi_time", "now_ms")
 fn now_ms() -> Int
+
+// DEBUG: temporary diagnostic logger for the hang-test "succeeded" flake.
+// Writes timestamped events to /tmp/fbi-debug.log; CI uploads the file as
+// an artifact on test failure. Remove this and its callers once the root
+// cause is identified.
+fn debug_log(msg: String) -> Nil {
+  let line = int.to_string(now_ms()) <> " " <> msg <> "\n"
+  let _ = simplifile.append(to: "/tmp/fbi-debug.log", contents: line)
+  Nil
+}

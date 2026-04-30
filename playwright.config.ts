@@ -4,11 +4,10 @@ export default defineConfig({
   testDir: 'tests/e2e/quantico',
   timeout: 120_000,
   fullyParallel: false, // shared FBI server
-  // Retry up to 2× on CI to absorb genuinely-flaky timing failures
-  // (auto-scroll re-pin race, hang container kill propagation under
-  // parallel-test load — both observed flaking through retries=1 on PR
-  // CI). Keep 0 locally so flakes are visible during development.
-  retries: process.env.CI ? 2 : 0,
+  // TEMP: retries=0 on the debug/hang-flake branch so the suspect flakes
+  // surface and we can capture /tmp/fbi-debug.log. Bring back the 2 once
+  // we've identified root cause.
+  retries: 0,
   // Warm the orchestrator's docker image cache before any tests run.
   // Without this, the first 1-2 tests on a fresh CI runner race a 2-3 min
   // image build and fail their tight assertions.

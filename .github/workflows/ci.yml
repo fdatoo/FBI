@@ -154,6 +154,12 @@ jobs:
         with:
           name: playwright-test-results
           path: test-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fbi-debug-log
+          path: /tmp/fbi-debug.log
+          if-no-files-found: ignore
 
   image-scan:
     name: Trivy scan agent image

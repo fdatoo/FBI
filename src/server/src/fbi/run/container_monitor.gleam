@@ -150,13 +150,20 @@ pub fn read_agent_status(state_dir: String) -> Option(String) {
 }
 
 fn wait_for_exit(config: Config, cid: String) -> Int {
+  debug_log("WAIT_BEGIN cid=" <> cid)
   case docker.connect(config.docker_socket) {
     Ok(sock) -> {
       let code = case docker.wait_container(sock, cid) {
-        Ok(c) -> c
+        Ok(c) -> {
+          debug_log("WAIT_RESULT cid=" <> cid <> " code=" <> int.to_string(c))
+          c
+        }
         Error(e) -> {
           wisp.log_warning(
             "container_monitor: wait failed: " <> docker.describe_error(e),
+          )
+          debug_log(
+            "WAIT_FAILED cid=" <> cid <> " err=" <> docker.describe_error(e),
           )
           -1
         }
@@ -168,9 +175,17 @@ fn wait_for_exit(config: Config, cid: String) -> Int {
       wisp.log_warning(
         "container_monitor: docker connect: " <> docker.describe_error(e),
       )
+      debug_log(
+        "WAIT_CONNECT_FAILED cid=" <> cid <> " err=" <> docker.describe_error(e),
+      )
       -1
     }
   }
+}
+
+fn debug_log(msg: String) -> Nil {
+  let _ = simplifile.append(to: "/tmp/fbi-debug.log", contents: msg <> "\n")
+  Nil
 }
 
 fn read_outcome(state_dir: String, exit_code: Int) -> RunOutcome {

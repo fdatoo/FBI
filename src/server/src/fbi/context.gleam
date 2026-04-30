@@ -1,4 +1,5 @@
 import fbi/config.{type Config}
+import fbi/git/mutex.{type Cmd}
 import fbi/pubsub.{type PubsubMsg}
 import fbi/run/registry.{type RegistryMsg}
 import gleam/erlang/process.{type Subject}
@@ -10,5 +11,6 @@ pub type Context {
     config: Config,
     run_registry: Subject(RegistryMsg),
     pubsub: Subject(PubsubMsg),
+    history_mutex: Subject(Cmd),
   )
 }

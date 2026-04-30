@@ -769,6 +769,75 @@ fn handle_build_line(
   }
 }
 
+pub type ExecResult {
+  ExecResult(exit_code: Int, output: String)
+}
+
+pub fn exec_container(
+  sock: Socket,
+  container_id: String,
+  cmd: List(String),
+  user: String,
+) -> Result(ExecResult, DockerError) {
+  // 1. Create the exec instance.
+  let create_body =
+    json.object([
+      #("AttachStdout", json.bool(True)),
+      #("AttachStderr", json.bool(True)),
+      #("Tty", json.bool(False)),
+      #("User", json.string(user)),
+      #("Cmd", json.array(cmd, json.string)),
+    ])
+  use #(status, resp) <- result.try(request(
+    sock,
+    "POST",
+    "/containers/" <> container_id <> "/exec",
+    bit_array.from_string(json.to_string(create_body)),
+    "application/json",
+  ))
+  use exec_id <- result.try(case status {
+    201 -> {
+      use s <- result.try(to_string(resp))
+      let dec = {
+        use id <- decode.field("Id", decode.string)
+        decode.success(id)
+      }
+      json.parse(s, dec) |> result.map_error(fn(_) { DecodeError("exec id") })
+    }
+    code -> Error(HttpError(code, result.unwrap(to_string(resp), "")))
+  })
+  // 2. Start the exec; capture combined stdout+stderr.
+  use #(_, start_body) <- result.try(request(
+    sock,
+    "POST",
+    "/exec/" <> exec_id <> "/start",
+    bit_array.from_string(
+      json.to_string(
+        json.object([#("Detach", json.bool(False)), #("Tty", json.bool(False))]),
+      ),
+    ),
+    "application/json",
+  ))
+  let output = result.unwrap(to_string(start_body), "")
+  // 3. Inspect to read exit code.
+  use #(_, ins_body) <- result.try(request(
+    sock,
+    "GET",
+    "/exec/" <> exec_id <> "/json",
+    <<>>,
+    "application/json",
+  ))
+  use ins_str <- result.try(to_string(ins_body))
+  let exit_dec = {
+    use code <- decode.field("ExitCode", decode.int)
+    decode.success(code)
+  }
+  case json.parse(ins_str, exit_dec) {
+    Ok(code) -> Ok(ExecResult(exit_code: code, output: output))
+    Error(_) -> Error(DecodeError("exec exit code"))
+  }
+}
+
 // Suppress unused import warning for framing module
 pub fn unframe_output(b: BitArray) -> Result(BitArray, String) {
   framing.unframe(b)

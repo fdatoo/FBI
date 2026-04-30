@@ -291,11 +291,10 @@ pub fn resurrect(
                     <> reason,
                   )
                 Ok(#(actor_subject, bc)) -> {
-                  let global_prompt =
-                    case settings.get(db) {
-                      Ok(s) -> s.global_prompt
-                      Error(_) -> ""
-                    }
+                  let global_prompt = case settings.get(db) {
+                    Ok(s) -> s.global_prompt
+                    Error(_) -> ""
+                  }
                   run_worker.launch(
                     run_worker.LaunchInput(
                       run: child,
@@ -379,9 +378,14 @@ fn read_outcome(state_dir: String, exit_code: Int) -> RunOutcome {
         use branch <- decode.optional_field("branch", "", decode.string)
         use session_id <- decode.optional_field("session_id", "", decode.string)
         use title <- decode.optional_field("title", "", decode.string)
-        decode.success(
-          #(agent_exit, push_exit, head_sha, branch, session_id, title),
-        )
+        decode.success(#(
+          agent_exit,
+          push_exit,
+          head_sha,
+          branch,
+          session_id,
+          title,
+        ))
       }
       case json.parse(json_str, decoder) {
         Error(_) ->

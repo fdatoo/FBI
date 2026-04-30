@@ -405,7 +405,10 @@ pub fn insert_run(
   )
 }
 
-pub fn branch_in_use(db: sqlight.Connection, branch: String) -> Result(Bool, DbError) {
+pub fn branch_in_use(
+  db: sqlight.Connection,
+  branch: String,
+) -> Result(Bool, DbError) {
   connection.query_one(
     "SELECT COUNT(*) FROM runs WHERE branch_name = ? AND state IN ('queued', 'running', 'waiting', 'awaiting_resume')",
     db,

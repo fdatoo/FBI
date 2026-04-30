@@ -182,11 +182,10 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
                           wisp.internal_server_error()
                         }
                         Ok(#(actor_subject, bc)) -> {
-                          let global_prompt =
-                            case settings.get(ctx.db) {
-                              Ok(s) -> s.global_prompt
-                              Error(_) -> ""
-                            }
+                          let global_prompt = case settings.get(ctx.db) {
+                            Ok(s) -> s.global_prompt
+                            Error(_) -> ""
+                          }
                           run_worker.launch(
                             run_worker.LaunchInput(
                               run: new_run,
@@ -212,11 +211,7 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
   }
 }
 
-pub fn handle_resume_now(
-  req: Request,
-  ctx: Context,
-  id_str: String,
-) -> Response {
+pub fn handle_resume_now(req: Request, ctx: Context, id_str: String) -> Response {
   case req.method {
     http.Post ->
       case int.parse(id_str) {
@@ -281,13 +276,29 @@ fn create(req: Request, ctx: Context, project_id: Int) -> Response {
       decode.optional(decode.string),
     )
     use force <- decode.optional_field("force", False, decode.bool)
-    decode.success(
-      #(prompt, branch, model, effort, subagent_model, mock, mock_scenario, force),
-    )
+    decode.success(#(
+      prompt,
+      branch,
+      model,
+      effort,
+      subagent_model,
+      mock,
+      mock_scenario,
+      force,
+    ))
   }
   case decode.run(body, decoder) {
     Error(_) -> wisp.bad_request("Invalid request body")
-    Ok(#(prompt, branch, model, effort, subagent_model, mock, mock_scenario, force)) ->
+    Ok(#(
+      prompt,
+      branch,
+      model,
+      effort,
+      subagent_model,
+      mock,
+      mock_scenario,
+      force,
+    )) ->
       case projects.get(ctx.db, project_id) {
         Error(_) -> wisp.not_found()
         Ok(project) ->
@@ -380,12 +391,7 @@ fn do_create(
     }
     Ok(run) ->
       case
-        run_supervisor.start_run(
-          ctx.run_registry,
-          ctx.db,
-          ctx.config,
-          run.id,
-        )
+        run_supervisor.start_run(ctx.run_registry, ctx.db, ctx.config, run.id)
       {
         Error(reason) -> {
           wisp.log_error(
@@ -459,10 +465,7 @@ fn index_paged(ctx: Context, filter: runs.ListFilter) -> Response {
   }
 }
 
-fn get_param(
-  qs: List(#(String, String)),
-  key: String,
-) -> option.Option(String) {
+fn get_param(qs: List(#(String, String)), key: String) -> option.Option(String) {
   case list.key_find(qs, key) {
     Ok(v) if v != "" -> Some(v)
     _ -> None

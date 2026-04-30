@@ -1,8 +1,10 @@
 import fbi/config.{type Config}
 import fbi/db/projects
 import fbi/db/runs as runs_db
+import fbi/db/settings
 import fbi/docker
 import fbi/git.{type GitError}
+import fbi/pubsub.{type PubsubMsg}
 import fbi/run/actor as run_actor
 import fbi/run/broadcaster
 import fbi/run/registry.{type RegistryMsg, Register}
@@ -135,24 +137,27 @@ pub fn dispatch_polish(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub: Subject(PubsubMsg),
   parent: runs_db.Run,
 ) -> DispatchResult {
-  dispatch_child(db, config, registry, parent, "polish")
+  dispatch_child(db, config, registry, pubsub, parent, "polish")
 }
 
 pub fn dispatch_merge_conflict(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub: Subject(PubsubMsg),
   parent: runs_db.Run,
 ) -> DispatchResult {
-  dispatch_child(db, config, registry, parent, "merge-conflict")
+  dispatch_child(db, config, registry, pubsub, parent, "merge-conflict")
 }
 
 fn dispatch_child(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub: Subject(PubsubMsg),
   parent: runs_db.Run,
   kind: String,
 ) -> DispatchResult {
@@ -171,9 +176,13 @@ fn dispatch_child(
           case projects.get(db, parent.project_id) {
             Error(_) -> DispatchError(message: "project missing")
             Ok(project) ->
-              case start_run_actor(db, config, registry, child) {
+              case start_run_actor(db, config, registry, pubsub, child) {
                 Error(reason) -> DispatchError(message: reason)
                 Ok(#(actor_subj, bc)) -> {
+                  let global_prompt = case settings.get(db) {
+                    Ok(s) -> s.global_prompt
+                    Error(_) -> ""
+                  }
                   run_worker.launch(
                     run_worker.LaunchInput(
                       run: child,
@@ -182,6 +191,7 @@ fn dispatch_child(
                       cols: 80,
                       rows: 24,
                       broadcaster: bc,
+                      global_prompt: global_prompt,
                     ),
                     actor_subj,
                   )
@@ -198,6 +208,7 @@ fn start_run_actor(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub: Subject(PubsubMsg),
   run: runs_db.Run,
 ) -> Result(#(Subject(RunMsg), Subject(BroadcastMsg)), String) {
   use bc <- result.try(
@@ -205,7 +216,7 @@ fn start_run_actor(
     |> result.map_error(fn(_) { "broadcaster start failed" }),
   )
   use actor_subj <- result.try(
-    run_actor.start(run.id, db, config, bc, registry)
+    run_actor.start(run.id, db, config, bc, registry, pubsub)
     |> result.map_error(fn(_) { "actor start failed" }),
   )
   process.send(registry, Register(run.id, actor_subj))

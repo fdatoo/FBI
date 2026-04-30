@@ -138,6 +138,7 @@ fn run_op(
               ctx.db,
               ctx.config,
               ctx.run_registry,
+              ctx.pubsub,
               run,
             )
           {
@@ -166,6 +167,7 @@ fn dispatch_if_conflict(
           ctx.db,
           ctx.config,
           ctx.run_registry,
+          ctx.pubsub,
           run,
         )
       {

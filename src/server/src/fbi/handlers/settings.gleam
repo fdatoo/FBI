@@ -7,7 +7,7 @@ import fbi/run/image_gc
 import gleam/dynamic/decode
 import gleam/http
 import gleam/json
-import gleam/option.{None}
+import gleam/option.{type Option, None}
 import wisp.{type Request, type Response}
 
 pub fn handle(req: Request, ctx: Context) -> Response {
@@ -61,15 +61,15 @@ fn update(req: Request, ctx: Context) -> Response {
       None,
       decode.optional(decode.bool),
     )
-    use global_marketplaces_json <- decode.optional_field(
-      "global_marketplaces_json",
+    use global_marketplaces <- decode.optional_field(
+      "global_marketplaces",
       None,
-      decode.optional(decode.string),
+      decode.optional(decode.list(decode.string)),
     )
-    use global_plugins_json <- decode.optional_field(
-      "global_plugins_json",
+    use global_plugins <- decode.optional_field(
+      "global_plugins",
       None,
-      decode.optional(decode.string),
+      decode.optional(decode.list(decode.string)),
     )
     use usage_notifications_enabled <- decode.optional_field(
       "usage_notifications_enabled",
@@ -83,8 +83,8 @@ fn update(req: Request, ctx: Context) -> Response {
       auto_resume_max_attempts,
       concurrency_warn_at,
       image_gc_enabled,
-      global_marketplaces_json,
-      global_plugins_json,
+      global_marketplaces,
+      global_plugins,
       usage_notifications_enabled,
     ))
   }
@@ -97,11 +97,16 @@ fn update(req: Request, ctx: Context) -> Response {
       auto_resume_max_attempts,
       concurrency_warn_at,
       image_gc_enabled,
-      global_marketplaces_json,
-      global_plugins_json,
+      global_marketplaces,
+      global_plugins,
       usage_notifications_enabled,
     )) -> {
       let now = now_ms()
+      let encode_list = fn(ms: Option(List(String))) {
+        option.map(ms, fn(xs) {
+          json.array(xs, json.string) |> json.to_string()
+        })
+      }
       case
         settings.patch(
           ctx.db,
@@ -111,8 +116,8 @@ fn update(req: Request, ctx: Context) -> Response {
           auto_resume_max_attempts,
           concurrency_warn_at,
           image_gc_enabled,
-          global_marketplaces_json,
-          global_plugins_json,
+          encode_list(global_marketplaces),
+          encode_list(global_plugins),
           usage_notifications_enabled,
           now,
         )

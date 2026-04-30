@@ -460,7 +460,56 @@ fn setup_run_dir(input: LaunchInput) -> Result(Nil, String) {
   let polish_src = fbi_priv_path("static/polish-prompt.txt")
   let polish_dst = scripts_dir <> "/polish-prompt.txt"
   let _ = simplifile.copy_file(polish_src, polish_dst)
-  Ok(Nil)
+  case input.run.kind, input.run.parent_run_id {
+    "continue", Some(parent_id) ->
+      seed_mount_from_parent(input.config.runs_dir, parent_id, run_dir)
+    _, _ -> Ok(Nil)
+  }
+}
+
+// Copy the parent run's mount/ tree (Claude session JSONL files) into this
+// run's mount/ so that `claude --resume <session_id>` can find its history.
+// Only one level of subdirectories is needed: mount/-workspace/*.jsonl.
+fn seed_mount_from_parent(
+  runs_dir: String,
+  parent_id: Int,
+  run_dir: String,
+) -> Result(Nil, String) {
+  let parent_mount = runs_dir <> "/" <> int.to_string(parent_id) <> "/mount"
+  let own_mount = run_dir <> "/mount"
+  use _ <- result.try(
+    simplifile.create_directory_all(own_mount)
+    |> result.map_error(fn(e) {
+      "mkdir mount: " <> simplifile.describe_error(e)
+    }),
+  )
+  case simplifile.read_directory(parent_mount) {
+    Error(_) -> Ok(Nil)
+    Ok(entries) -> {
+      list.each(entries, fn(name) {
+        let src = parent_mount <> "/" <> name
+        let dst = own_mount <> "/" <> name
+        case is_regular_directory(src) {
+          True -> {
+            let _ = simplifile.create_directory_all(dst)
+            case simplifile.read_directory(src) {
+              Error(_) -> Nil
+              Ok(files) ->
+                list.each(files, fn(fname) {
+                  let _ = simplifile.copy_file(src <> "/" <> fname, dst <> "/" <> fname)
+                  Nil
+                })
+            }
+          }
+          False -> {
+            let _ = simplifile.copy_file(src, dst)
+            Nil
+          }
+        }
+      })
+      Ok(Nil)
+    }
+  }
 }
 
 @external(erlang, "fbi_priv", "path")

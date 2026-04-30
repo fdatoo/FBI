@@ -460,22 +460,25 @@ fn setup_run_dir(input: LaunchInput) -> Result(Nil, String) {
   let polish_src = fbi_priv_path("static/polish-prompt.txt")
   let polish_dst = scripts_dir <> "/polish-prompt.txt"
   let _ = simplifile.copy_file(polish_src, polish_dst)
-  case input.run.kind, input.run.parent_run_id {
-    "continue", Some(parent_id) ->
-      seed_mount_from_parent(input.config.runs_dir, parent_id, run_dir)
+  case input.run.kind, resume_session_id(input.run) {
+    "continue", Some(sid) ->
+      seed_mount_for_session(input.config.runs_dir, run_dir, sid)
     _, _ -> Ok(Nil)
   }
 }
 
-// Copy the parent run's mount/ tree (Claude session JSONL files) into this
-// run's mount/ so that `claude --resume <session_id>` can find its history.
-// Only one level of subdirectories is needed: mount/-workspace/*.jsonl.
-fn seed_mount_from_parent(
+// Locate the run whose mount/ contains <session_id>.jsonl and copy that
+// mount tree here so `claude --resume <session_id>` finds its history.
+//
+// We scan ALL sibling run directories rather than just the direct parent
+// because a chain of continue runs (A→B→B′→...) may have been created
+// before this seeding logic existed — those intermediate mounts are empty
+// even though the original JSONL is still present in the root run's mount/.
+fn seed_mount_for_session(
   runs_dir: String,
-  parent_id: Int,
   run_dir: String,
+  session_id: String,
 ) -> Result(Nil, String) {
-  let parent_mount = runs_dir <> "/" <> int.to_string(parent_id) <> "/mount"
   let own_mount = run_dir <> "/mount"
   use _ <- result.try(
     simplifile.create_directory_all(own_mount)
@@ -483,30 +486,60 @@ fn seed_mount_from_parent(
       "mkdir mount: " <> simplifile.describe_error(e)
     }),
   )
-  case simplifile.read_directory(parent_mount) {
+  case find_session_mount(runs_dir, session_id) {
+    None -> {
+      wisp.log_warning(
+        "resume: no mount found containing session " <> session_id,
+      )
+      Ok(Nil)
+    }
+    Some(src_mount) -> copy_mount_tree(src_mount, own_mount)
+  }
+}
+
+// Walk runs_dir/<N>/mount looking for -workspace/<session_id>.jsonl.
+fn find_session_mount(
+  runs_dir: String,
+  session_id: String,
+) -> option.Option(String) {
+  case simplifile.read_directory(runs_dir) {
+    Error(_) -> option.None
+    Ok(run_ids) ->
+      list.find_map(run_ids, fn(rid) {
+        let candidate = runs_dir <> "/" <> rid <> "/mount"
+        let jsonl = candidate <> "/-workspace/" <> session_id <> ".jsonl"
+        case simplifile.is_file(jsonl) {
+          Ok(True) -> Ok(candidate)
+          _ -> Error(Nil)
+        }
+      })
+      |> option.from_result
+  }
+}
+
+// Copy a mount/ tree (one level of subdirectories) into dst/.
+fn copy_mount_tree(src: String, dst: String) -> Result(Nil, String) {
+  case simplifile.read_directory(src) {
     Error(_) -> Ok(Nil)
     Ok(entries) -> {
       list.each(entries, fn(name) {
-        let src = parent_mount <> "/" <> name
-        let dst = own_mount <> "/" <> name
-        case is_regular_directory(src) {
+        let s = src <> "/" <> name
+        let d = dst <> "/" <> name
+        case is_regular_directory(s) {
           True -> {
-            let _ = simplifile.create_directory_all(dst)
-            case simplifile.read_directory(src) {
+            let _ = simplifile.create_directory_all(d)
+            case simplifile.read_directory(s) {
               Error(_) -> Nil
               Ok(files) ->
                 list.each(files, fn(fname) {
                   let _ =
-                    simplifile.copy_file(
-                      src <> "/" <> fname,
-                      dst <> "/" <> fname,
-                    )
+                    simplifile.copy_file(s <> "/" <> fname, d <> "/" <> fname)
                   Nil
                 })
             }
           }
           False -> {
-            let _ = simplifile.copy_file(src, dst)
+            let _ = simplifile.copy_file(s, d)
             Nil
           }
         }

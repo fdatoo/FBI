@@ -120,8 +120,7 @@ fn exec_discard(ctx: Context, cid: String) -> Response {
           sock,
           cid,
           [
-            "sh",
-            "-c",
+            "sh", "-c",
             "cd /workspace && git restore --staged --worktree . && git clean -fd",
           ],
           "agent",

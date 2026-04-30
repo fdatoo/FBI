@@ -278,8 +278,13 @@ fn build_devcontainer(
     fbi_cmd_run_streaming(
       npx,
       [
-        "-y", "@devcontainers/cli@0.67.0", "build", "--workspace-folder",
-        tmp_dir, "--image-name", tag,
+        "-y",
+        "@devcontainers/cli@0.67.0",
+        "build",
+        "--workspace-folder",
+        tmp_dir,
+        "--image-name",
+        tag,
       ],
       [],
       on_chunk,
@@ -414,10 +419,7 @@ fn build_post_layer(
   on_log("[fbi] applying post-build layer → " <> final_tag <> "\n")
   buildx_build_with_files(
     final_tag,
-    dict.from_list([
-      #("Dockerfile", dockerfile),
-      #("postbuild.sh", postbuild),
-    ]),
+    dict.from_list([#("Dockerfile", dockerfile), #("postbuild.sh", postbuild)]),
     on_log,
   )
   |> result.map_error(fn(e) { "build_post_layer: " <> e })
@@ -446,7 +448,13 @@ fn buildx_build_with_files(
       use _ <- result.try(write_build_context(files, context_dir))
       let docker = find_executable("docker")
       let args = [
-        "buildx", "build", "--load", "--progress=plain", "-t", tag, context_dir,
+        "buildx",
+        "build",
+        "--load",
+        "--progress=plain",
+        "-t",
+        tag,
+        context_dir,
       ]
       let on_chunk = fn(bin: BitArray) -> Nil {
         case bit_array.to_string(bin) {

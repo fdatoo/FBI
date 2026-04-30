@@ -269,10 +269,7 @@ fn unsubscribe(state: ConnState) -> Nil {
 
 fn send_state(conn: mist.WebsocketConnection, s: String) -> Nil {
   let body =
-    json.object([
-      #("type", json.string("state")),
-      #("state", json.string(s)),
-    ])
+    json.object([#("type", json.string("state")), #("state", json.string(s))])
     |> json.to_string()
   let _ = mist.send_text_frame(conn, body)
   Nil

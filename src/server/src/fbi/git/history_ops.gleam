@@ -47,11 +47,7 @@ pub fn squash_local(
     |> result.map(string.trim),
   )
   use _ <- result_try(
-    git.run(repo_path, [
-      "update-ref",
-      "refs/heads/" <> branch,
-      new_commit,
-    ]),
+    git.run(repo_path, ["update-ref", "refs/heads/" <> branch, new_commit]),
   )
   Ok(Complete(sha: new_commit))
 }
@@ -83,10 +79,7 @@ pub fn mirror_rebase(
   }
 }
 
-pub fn sync_in_container(
-  config: Config,
-  cid: String,
-) -> Result(Outcome, String) {
+pub fn sync_in_container(config: Config, cid: String) -> Result(Outcome, String) {
   exec_in_container(config, cid, "cd /workspace && git pull --no-rebase 2>&1")
 }
 

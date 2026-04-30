@@ -51,13 +51,7 @@ pub fn commit_files(
     ]),
   )
   use num_output <- result_try(
-    git.run(repo_path, [
-      "show",
-      "--no-renames",
-      "--pretty=",
-      "--numstat",
-      sha,
-    ]),
+    git.run(repo_path, ["show", "--no-renames", "--pretty=", "--numstat", sha]),
   )
   let names = parse.parse_name_status(ns_output)
   let nums = parse.parse_numstat(num_output)
@@ -74,14 +68,7 @@ pub fn file_diff(
     False -> empty_tree_sha
   }
   use output <- result_try(
-    git.run(repo_path, [
-      "diff",
-      "--no-color",
-      parent_arg,
-      sha,
-      "--",
-      path,
-    ]),
+    git.run(repo_path, ["diff", "--no-color", parent_arg, sha, "--", path]),
   )
   let truncated = string.byte_size(output) > diff_byte_cap
   let body = case truncated {
@@ -97,18 +84,10 @@ pub fn branch_base_ahead_behind(
   default: String,
 ) -> Result(BranchBase, GitError) {
   use ahead_str <- result_try(
-    git.run(repo_path, [
-      "rev-list",
-      "--count",
-      default <> ".." <> branch,
-    ]),
+    git.run(repo_path, ["rev-list", "--count", default <> ".." <> branch]),
   )
   use behind_str <- result_try(
-    git.run(repo_path, [
-      "rev-list",
-      "--count",
-      branch <> ".." <> default,
-    ]),
+    git.run(repo_path, ["rev-list", "--count", branch <> ".." <> default]),
   )
   Ok(BranchBase(
     base: default,
@@ -123,10 +102,7 @@ pub fn wip_files(repo_path: String) -> Result(Option(WipSnapshot), GitError) {
     Ok(snapshot_str) -> {
       let snapshot_sha = string.trim(snapshot_str)
       use parent_str <- result_try(
-        git.run(repo_path, [
-          "rev-parse",
-          snapshot_sha <> "^",
-        ]),
+        git.run(repo_path, ["rev-parse", snapshot_sha <> "^"]),
       )
       let parent_sha = string.trim(parent_str)
       use ns_output <- result_try(

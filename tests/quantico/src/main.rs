@@ -228,14 +228,34 @@ fn run_scenario(
         state_dir: state_dir.clone(),
     };
     let exit_code = match executor::run(&scenario, &mut ctx) {
-        Ok(executor::Outcome::Exited(c)) => c,
+        Ok(executor::Outcome::Exited(c)) => {
+            if let Some(ref dir) = state_dir {
+                let _ = std::fs::write(
+                    dir.join("quantico-debug.log"),
+                    format!("OUTCOME=Exited({})\n", c),
+                );
+            }
+            c
+        }
         Ok(executor::Outcome::SleepingForever) => {
+            if let Some(ref dir) = state_dir {
+                let _ = std::fs::write(
+                    dir.join("quantico-debug.log"),
+                    "OUTCOME=SleepingForever\n",
+                );
+            }
             // Block forever (until SIGKILL). SIGTERM honoured by default.
             loop {
                 std::thread::park();
             }
         }
         Err(e) => {
+            if let Some(ref dir) = state_dir {
+                let _ = std::fs::write(
+                    dir.join("quantico-debug.log"),
+                    format!("OUTCOME=Err: {} (kind={:?})\n", e, e.kind()),
+                );
+            }
             let _ = writeln!(std::io::stderr(), "quantico: io error: {}", e);
             1
         }

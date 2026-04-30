@@ -160,6 +160,26 @@ jobs:
           name: fbi-debug-log
           path: /tmp/fbi-debug.log
           if-no-files-found: ignore
+      - name: Collect quantico per-run debug logs
+        if: always()
+        run: |
+          set +e
+          mkdir -p /tmp/fbi-runs-state
+          if [ -d /tmp/fbi-e2e-runs ]; then
+            for run_dir in /tmp/fbi-e2e-runs/*/; do
+              run_id=$(basename "$run_dir")
+              if [ -d "$run_dir/state" ]; then
+                cp -r "$run_dir/state" "/tmp/fbi-runs-state/run-$run_id" 2>/dev/null || true
+              fi
+            done
+          fi
+          ls -la /tmp/fbi-runs-state/ || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fbi-runs-state
+          path: /tmp/fbi-runs-state
+          if-no-files-found: ignore
 
   image-scan:
     name: Trivy scan agent image

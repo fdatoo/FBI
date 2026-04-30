@@ -352,7 +352,7 @@ fn claude_config_binds(dir: String) -> List(String) {
       #(
         dir <> "/.credentials.json",
         "/home/agent/.claude/.credentials.json",
-        "ro",
+        "rw",
       ),
       #(parent <> "/.claude.json", "/home/agent/.claude.json", "rw"),
       #(dir <> "/settings.json", "/home/agent/.claude/settings.json", "rw"),

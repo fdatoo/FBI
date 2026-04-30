@@ -106,11 +106,7 @@ pub fn wip_files_with_snapshot_returns_diff_test() {
     git.run(work, ["commit-tree", tree, "-p", head_sha, "-m", "wip snapshot"])
   let snapshot_sha = string.trim(commit_str)
   let assert Ok(_) =
-    git.run(work, [
-      "push",
-      "origin",
-      snapshot_sha <> ":refs/fbi/wip-snapshot",
-    ])
+    git.run(work, ["push", "origin", snapshot_sha <> ":refs/fbi/wip-snapshot"])
   let assert Ok(option.Some(snapshot)) = repo.wip_files(bare)
   snapshot.parent_sha |> should.equal(head_sha)
   snapshot.snapshot_sha |> should.equal(snapshot_sha)
@@ -132,11 +128,7 @@ pub fn wip_files_no_diff_returns_none_test() {
     git.run(work, ["commit-tree", tree, "-p", head_sha, "-m", "wip snapshot"])
   let snapshot_sha = string.trim(commit_str)
   let assert Ok(_) =
-    git.run(work, [
-      "push",
-      "origin",
-      snapshot_sha <> ":refs/fbi/wip-snapshot",
-    ])
+    git.run(work, ["push", "origin", snapshot_sha <> ":refs/fbi/wip-snapshot"])
   repo.wip_files(bare) |> should.equal(Ok(option.None))
 }
 

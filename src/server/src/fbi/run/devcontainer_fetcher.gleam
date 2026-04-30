@@ -32,10 +32,7 @@ fn do_fetch(
     <> int.to_string(now_ms())
     <> "-"
     <> int.to_string(unique_int())
-  let env = [
-    #("SSH_AUTH_SOCK", ssh_auth_sock),
-    #("GIT_TERMINAL_PROMPT", "0"),
-  ]
+  let env = [#("SSH_AUTH_SOCK", ssh_auth_sock), #("GIT_TERMINAL_PROMPT", "0")]
   let result = try_fetch(repo_url, tmp_dir, env, on_log)
   let _ = simplifile.delete(tmp_dir)
   result
@@ -52,8 +49,13 @@ fn try_fetch(
     run_cmd(
       git,
       [
-        "clone", "--depth=1", "--filter=blob:none", "--sparse", "--no-tags",
-        repo_url, tmp_dir,
+        "clone",
+        "--depth=1",
+        "--filter=blob:none",
+        "--sparse",
+        "--no-tags",
+        repo_url,
+        tmp_dir,
       ],
       env,
     )

@@ -1,5 +1,6 @@
 import fbi/context.{type Context}
 import fbi/db/connection
+import fbi/db/usage as usage_db
 import gleam/dynamic/decode
 import gleam/http
 import gleam/int
@@ -9,20 +10,11 @@ import gleam/result
 import sqlight
 import wisp.{type Request, type Response}
 
-/// Returns a minimal UsageState. Plan, buckets, and pacing aren't tracked
-/// yet — the frontend treats this as "unavailable" and shows the badge.
-pub fn handle_state(req: Request, _ctx: Context) -> Response {
+/// Returns the current UsageState from the DB.
+pub fn handle_state(req: Request, ctx: Context) -> Response {
   case req.method {
     http.Get ->
-      json.object([
-        #("plan", json.null()),
-        #("observed_at", json.null()),
-        #("last_error", json.string("missing_credentials")),
-        #("last_error_at", json.null()),
-        #("buckets", json.array([], json.string)),
-        #("pacing", json.object([])),
-      ])
-      |> json.to_string()
+      usage_db.get_usage_state_json(ctx.db, now_ms())
       |> wisp.json_response(200)
     _ -> wisp.method_not_allowed([http.Get])
   }

@@ -116,11 +116,7 @@ pub fn handle_submodule_commit_files(
   }
 }
 
-pub fn handle_file_diff(
-  req: Request,
-  ctx: Context,
-  id_str: String,
-) -> Response {
+pub fn handle_file_diff(req: Request, ctx: Context, id_str: String) -> Response {
   case req.method {
     http.Get ->
       case int.parse(id_str) {

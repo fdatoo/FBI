@@ -222,6 +222,25 @@ fn handle_live_frame(
       let _ = mist.send_text_frame(conn, body)
       mist.continue(state)
     }
+    mist.Custom(types.UsageSnap(model, input, output, cache_read, cache_create)) -> {
+      let body =
+        json.object([
+          #("type", json.string("usage")),
+          #(
+            "snapshot",
+            json.object([
+              #("model", json.string(model)),
+              #("input_tokens", json.int(input)),
+              #("output_tokens", json.int(output)),
+              #("cache_read_tokens", json.int(cache_read)),
+              #("cache_create_tokens", json.int(cache_create)),
+            ]),
+          ),
+        ])
+        |> json.to_string()
+      let _ = mist.send_text_frame(conn, body)
+      mist.continue(state)
+    }
     mist.Closed | mist.Shutdown -> {
       unsubscribe(state)
       mist.stop()
@@ -250,10 +269,7 @@ fn unsubscribe(state: ConnState) -> Nil {
 
 fn send_state(conn: mist.WebsocketConnection, s: String) -> Nil {
   let body =
-    json.object([
-      #("type", json.string("state")),
-      #("state", json.string(s)),
-    ])
+    json.object([#("type", json.string("state")), #("state", json.string(s))])
     |> json.to_string()
   let _ = mist.send_text_frame(conn, body)
   Nil

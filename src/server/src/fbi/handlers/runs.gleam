@@ -170,6 +170,7 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
                           ctx.db,
                           ctx.config,
                           new_run.id,
+                          ctx.pubsub,
                         )
                       {
                         Error(reason) -> {
@@ -211,11 +212,7 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
   }
 }
 
-pub fn handle_resume_now(
-  req: Request,
-  ctx: Context,
-  id_str: String,
-) -> Response {
+pub fn handle_resume_now(req: Request, ctx: Context, id_str: String) -> Response {
   case req.method {
     http.Post ->
       case int.parse(id_str) {
@@ -241,7 +238,13 @@ fn do_resume_now(ctx: Context, id: Int) -> Response {
     Ok(run) ->
       case run.state {
         "awaiting_resume" -> {
-          run_reattach.resurrect(run, ctx.db, ctx.config, ctx.run_registry)
+          run_reattach.resurrect(
+            run,
+            ctx.db,
+            ctx.config,
+            ctx.run_registry,
+            ctx.pubsub,
+          )
           wisp.response(202)
         }
         _ -> wisp.bad_request("Run is not awaiting_resume")
@@ -395,7 +398,13 @@ fn do_create(
     }
     Ok(run) ->
       case
-        run_supervisor.start_run(ctx.run_registry, ctx.db, ctx.config, run.id)
+        run_supervisor.start_run(
+          ctx.run_registry,
+          ctx.db,
+          ctx.config,
+          run.id,
+          ctx.pubsub,
+        )
       {
         Error(reason) -> {
           wisp.log_error(
@@ -469,10 +478,7 @@ fn index_paged(ctx: Context, filter: runs.ListFilter) -> Response {
   }
 }
 
-fn get_param(
-  qs: List(#(String, String)),
-  key: String,
-) -> option.Option(String) {
+fn get_param(qs: List(#(String, String)), key: String) -> option.Option(String) {
   case list.key_find(qs, key) {
     Ok(v) if v != "" -> Some(v)
     _ -> None

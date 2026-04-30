@@ -14,8 +14,10 @@ test('bracketed-paste-cycle: snapshot reload reproduces live state', async ({ pa
   const run = await createMockRun(page, { scenario: 'bracketed-paste-cycle' });
   try {
     await run.waitForFinalState();
+    // 500ms settle so trailing BroadcastChunk messages drain before polling.
     await page.waitForTimeout(500);
     const marker = 'bracketed paste enabled';
+    await run.waitForTerminalText(marker, { timeoutMs: 15_000 });
     const liveText = await run.terminalTextFrom(marker);
     expect(liveText).not.toBe('');
 

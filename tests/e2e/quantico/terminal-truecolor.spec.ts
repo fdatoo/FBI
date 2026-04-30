@@ -17,8 +17,10 @@ test('truecolor: snapshot reload reproduces live state', async ({ page }) => {
     // this, late bytes between the live and rebuilt captures make the
     // equality check non-deterministic.
     await run.waitForFinalState();
-    await page.waitForTimeout(500); // settle for post-completion bytes
+    // 500ms settle so trailing BroadcastChunk messages drain before polling.
+    await page.waitForTimeout(500);
     const marker = 'orange truecolor'; // first scenario-emitted line
+    await run.waitForTerminalText(marker, { timeoutMs: 15_000 });
     const liveText = await run.terminalTextFrom(marker);
     expect(liveText).not.toBe(''); // sanity: scenario actually ran
 

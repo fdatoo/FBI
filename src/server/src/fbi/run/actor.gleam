@@ -19,6 +19,7 @@ import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/result
+import gleam/string
 import simplifile
 import sqlight
 import wisp
@@ -218,6 +219,15 @@ fn handle(state: State, msg: RunMsg) -> actor.Next(State, RunMsg) {
     }
     Running(_, _, bc, _, _), AgentStatusChanged(status) -> {
       let _ = runs_db.mark_state(state.db, state.run_id, status, now_ms())
+      // Capture the claude session id when the agent first signals
+      // awaiting_resume — quantico writes /fbi-state/session-id at startup so
+      // we can record the session id for runs that haven't exited yet
+      // (e.g. limit-breach + sleep_forever). Without this, claude_session_id
+      // stays NULL and resurrect can't continue the run.
+      case status {
+        "awaiting_resume" -> capture_session_id(state)
+        _ -> Nil
+      }
       process.send(bc, BroadcastEvent(StateChanged(status)))
       actor.continue(state)
     }
@@ -425,6 +435,27 @@ fn send_snapshot(
     client,
     Snapshot(ansi: "", cols: cols, rows: rows, byte_offset: offset),
   )
+}
+
+fn capture_session_id(state: State) -> Nil {
+  let path =
+    state.config.runs_dir
+    <> "/"
+    <> int.to_string(state.run_id)
+    <> "/state/session-id"
+  case simplifile.read(path) {
+    Ok(contents) -> {
+      let sid = string.trim(contents)
+      case sid {
+        "" -> Nil
+        s -> {
+          let _ = runs_db.set_session_id_if_null(state.db, state.run_id, s)
+          Nil
+        }
+      }
+    }
+    Error(_) -> Nil
+  }
 }
 
 fn transcript_size(config: Config, run_id: Int) -> Int {

@@ -249,7 +249,8 @@ export function RunDetailPage() {
   }): Promise<void> {
     if (!run) return;
     try {
-      await api.continueRun(run.id, params);
+      const newRun = await api.continueRun(run.id, params);
+      nav(`/projects/${newRun.project_id}/runs/${newRun.id}`);
     } catch (e) {
       const raw = e instanceof Error ? e.message : String(e);
       const m = raw.match(/^HTTP \d+:\s*(.+)$/);

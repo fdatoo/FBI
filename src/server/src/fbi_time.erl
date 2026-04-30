@@ -21,8 +21,8 @@ parse_iso_str(Str) ->
     case string:tokens(Str, "T") of
         [Date, TimeZ] ->
             [Y, Mo, D] = [list_to_integer(X) || X <- string:tokens(Date, "-")],
-            % Strip timezone suffix
-            Time = string:trim(TimeZ, trailing, "Z+0123456789:-"),
+            % Take only HH:MM:SS (first 8 chars), dropping tz suffix and sub-seconds
+            Time = string:sub_string(TimeZ, 1, 8),
             TimeParts = string:tokens(Time, ":"),
             [H, Mi, S] = case TimeParts of
                 [HH, MM, SS] -> [list_to_integer(HH), list_to_integer(MM), trunc(float(list_to_integer(SS)))];

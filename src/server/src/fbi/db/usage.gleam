@@ -110,17 +110,56 @@ pub fn upsert_rate_limit_state(
   observed_at: Int,
 ) -> Result(Nil, DbError) {
   sqlight.query(
-    "INSERT INTO rate_limit_state (id, plan, observed_at)
-     VALUES (1, ?, ?)
+    "INSERT INTO rate_limit_state (id, plan, observed_at, last_error, last_error_at)
+     VALUES (1, ?, ?, NULL, NULL)
      ON CONFLICT(id) DO UPDATE SET
-       plan        = COALESCE(excluded.plan, rate_limit_state.plan),
-       observed_at = excluded.observed_at",
+       plan          = COALESCE(excluded.plan, rate_limit_state.plan),
+       observed_at   = excluded.observed_at,
+       last_error    = NULL,
+       last_error_at = NULL",
     on: db,
     with: [nullable_str(plan), sqlight.int(observed_at)],
     expecting: decode.dynamic,
   )
   |> result.map_error(SqlightError)
   |> result.map(fn(_) { Nil })
+}
+
+/// Record a credential or network error so the UI can surface it.
+pub fn upsert_rate_limit_error(
+  db: sqlight.Connection,
+  error: String,
+  ts: Int,
+) -> Result(Nil, DbError) {
+  sqlight.query(
+    "INSERT INTO rate_limit_state (id, last_error, last_error_at)
+     VALUES (1, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       last_error    = excluded.last_error,
+       last_error_at = excluded.last_error_at",
+    on: db,
+    with: [sqlight.text(error), sqlight.int(ts)],
+    expecting: decode.dynamic,
+  )
+  |> result.map_error(SqlightError)
+  |> result.map(fn(_) { Nil })
+}
+
+/// Unconditionally set window_started_at for a bucket.
+/// The usage poller uses this because the API gives authoritative reset_at data.
+pub fn set_window_start(
+  db: sqlight.Connection,
+  bucket_id: String,
+  window_started_at: Int,
+) -> Nil {
+  let _ =
+    sqlight.query(
+      "UPDATE rate_limit_buckets SET window_started_at = ? WHERE bucket_id = ?",
+      on: db,
+      with: [sqlight.int(window_started_at), sqlight.text(bucket_id)],
+      expecting: decode.dynamic,
+    )
+  Nil
 }
 
 pub fn upsert_bucket(

@@ -13,6 +13,7 @@ import fbi/run/gc_scheduler
 import fbi/run/reattach
 import fbi/run/registry as run_registry
 import fbi/run/resume_scheduler
+import fbi/run/usage_poller
 import gleam/erlang/process
 import gleam/http/request as http_req
 import gleam/int
@@ -59,6 +60,10 @@ pub fn main() {
   let assert Ok(_gc_scheduler) = gc_scheduler.start(db, cfg)
   let assert Ok(_resume_scheduler) =
     resume_scheduler.start(db, cfg, registry, pubsub_subject)
+  case usage_poller.start(cfg, db, pubsub_subject) {
+    Ok(_) -> wisp.log_info("usage poller started")
+    Error(_) -> wisp.log_warning("usage poller failed to start")
+  }
   let ctx =
     Context(
       db: db,

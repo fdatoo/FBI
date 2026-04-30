@@ -260,7 +260,7 @@ SESSION_ID=""
 if [ -n "${FBI_RESUME_SESSION_ID:-}" ]; then
     SESSION_ID="$FBI_RESUME_SESSION_ID"
 else
-    LATEST=$(find /home/agent/.claude -name "*.jsonl" -type f -newer /tmp/fbi-session-marker \
+    LATEST=$(find /home/agent/.claude/projects -name "*.jsonl" -type f -newer /tmp/fbi-session-marker \
         2>/dev/null | head -1)
     if [ -n "$LATEST" ]; then
         SESSION_ID=$(basename "$LATEST" .jsonl)

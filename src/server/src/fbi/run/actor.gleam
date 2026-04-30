@@ -1,6 +1,7 @@
 import fbi/config.{type Config}
 import fbi/db/runs as runs_db
 import fbi/docker
+import fbi/pubsub
 import fbi/run/container_monitor
 import fbi/run/registry.{type RegistryMsg, Unregister}
 import fbi/run/types.{
@@ -11,6 +12,7 @@ import fbi/run/types.{
   Starting, StateChanged, Subscribe, Unsubscribe, Waiting, WaitingTimeout,
   WorkerFailed, WorkerReady, WriteStdin,
 }
+import fbi/run/usage_tailer.{type TailerMsg}
 import gleam/bit_array
 import gleam/erlang/process.{type Subject}
 import gleam/int
@@ -31,6 +33,8 @@ pub type State {
     actor_subject: Subject(RunMsg),
     stdin_sock: Option(docker.Socket),
     registry: Subject(RegistryMsg),
+    pubsub: Subject(pubsub.PubsubMsg),
+    tailer: Option(Subject(TailerMsg)),
   )
 }
 
@@ -40,6 +44,7 @@ pub fn start(
   config: Config,
   bc: Subject(BroadcastMsg),
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Result(Subject(RunMsg), actor.StartError) {
   actor.new_with_initialiser(500, fn(subject) {
     State(
@@ -51,6 +56,8 @@ pub fn start(
       actor_subject: subject,
       stdin_sock: None,
       registry: registry,
+      pubsub: pubsub_subject,
+      tailer: None,
     )
     |> actor.initialised
     |> actor.returning(subject)
@@ -73,6 +80,7 @@ pub fn start_attached(
   config: Config,
   bc: Subject(BroadcastMsg),
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Result(Subject(RunMsg), actor.StartError) {
   actor.new_with_initialiser(500, fn(subject) {
     let stdin_sock = case
@@ -91,6 +99,9 @@ pub fn start_attached(
         None
       }
     }
+    // Start the tailer immediately for reattached runs
+    let tailer =
+      start_tailer(run_id, config, db, pubsub_subject, bc)
     State(
       run_id: run_id,
       db: db,
@@ -100,6 +111,8 @@ pub fn start_attached(
       actor_subject: subject,
       stdin_sock: stdin_sock,
       registry: registry,
+      pubsub: pubsub_subject,
+      tailer: tailer,
     )
     |> actor.initialised
     |> actor.returning(subject)
@@ -109,6 +122,38 @@ pub fn start_attached(
   |> actor.on_message(fn(state: State, msg: RunMsg) { handle(state, msg) })
   |> actor.start
   |> result.map(fn(started) { started.data })
+}
+
+fn start_tailer(
+  run_id: Int,
+  config: Config,
+  db: sqlight.Connection,
+  pubsub_subject: Subject(pubsub.PubsubMsg),
+  bc: Subject(BroadcastMsg),
+) -> Option(Subject(TailerMsg)) {
+  case usage_tailer.start(run_id, config, db, pubsub_subject, bc) {
+    Ok(subject) -> Some(subject)
+    Error(e) -> {
+      wisp.log_warning(
+        "run "
+        <> int.to_string(run_id)
+        <> " usage tailer failed to start: "
+        <> actor_start_error_to_string(e),
+      )
+      None
+    }
+  }
+}
+
+@external(erlang, "erlang", "term_to_binary")
+fn actor_start_error_to_binary(e: actor.StartError) -> BitArray
+
+fn actor_start_error_to_string(e: actor.StartError) -> String {
+  let bits = actor_start_error_to_binary(e)
+  case bit_array.to_string(bits) {
+    Ok(s) -> s
+    Error(_) -> "unknown error"
+  }
 }
 
 fn handle(state: State, msg: RunMsg) -> actor.Next(State, RunMsg) {
@@ -266,11 +311,13 @@ fn transition_to_running(
       None
     }
   }
+  let tailer = start_tailer(state.run_id, state.config, state.db, state.pubsub, bc)
   actor.continue(
     State(
       ..state,
       phase: Running(cid, branch, bc, cols, rows),
       stdin_sock: stdin_sock,
+      tailer: tailer,
     ),
   )
 }
@@ -318,6 +365,11 @@ fn transition_to_finishing(
   cid: String,
 ) -> actor.Next(State, RunMsg) {
   wisp.log_debug("run " <> int.to_string(state.run_id) <> " cleaning up")
+  // Stop the tailer so it does a final sweep before the run dir is cleaned
+  case state.tailer {
+    None -> Nil
+    Some(t) -> process.send(t, usage_tailer.Stop)
+  }
   process.send(bc, BroadcastShutdown)
   process.send(state.registry, Unregister(state.run_id))
   case state.stdin_sock {

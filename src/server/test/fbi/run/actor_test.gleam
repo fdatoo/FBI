@@ -2,6 +2,7 @@ import fbi/config
 import fbi/db/migrations
 import fbi/db/projects
 import fbi/db/runs
+import fbi/pubsub
 import fbi/run/actor as run_actor
 import fbi/run/broadcaster
 import fbi/run/registry
@@ -74,9 +75,10 @@ pub fn agent_status_changed_in_running_updates_db_and_broadcasts_test() {
   let #(db, cfg) = test_setup()
   let assert Ok(bc) = broadcaster.start()
   let assert Ok(reg) = registry.start()
+  let assert Ok(ps) = pubsub.start()
   let event_sub = process.new_subject()
   process.send(bc, BroadcastSubscribe(event_sub))
-  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg)
+  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg, ps)
   // Transition to Running
   process.send(actor_subject, WorkerReady("test-cid", "main", 80, 24))
   process.sleep(50)
@@ -97,7 +99,8 @@ pub fn agent_status_changed_ignored_when_not_running_test() {
   let #(db, cfg) = test_setup()
   let assert Ok(bc) = broadcaster.start()
   let assert Ok(reg) = registry.start()
-  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg)
+  let assert Ok(ps) = pubsub.start()
+  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg, ps)
   // Send in Starting phase — must not crash or change state
   process.send(actor_subject, AgentStatusChanged("waiting"))
   process.sleep(50)
@@ -109,7 +112,8 @@ pub fn worker_failed_transitions_to_failed_test() {
   let #(db, cfg) = test_setup()
   let assert Ok(bc) = broadcaster.start()
   let assert Ok(reg) = registry.start()
-  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg)
+  let assert Ok(ps) = pubsub.start()
+  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg, ps)
   process.send(actor_subject, WorkerFailed("simulated failure"))
   // Give the actor time to process the message
   process.sleep(50)
@@ -124,7 +128,8 @@ pub fn start_and_shutdown_test() {
   let #(db, cfg) = test_setup()
   let assert Ok(bc) = broadcaster.start()
   let assert Ok(reg) = registry.start()
-  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg)
+  let assert Ok(ps) = pubsub.start()
+  let assert Ok(actor_subject) = run_actor.start(1, db, cfg, bc, reg, ps)
   // Verify the actor starts correctly in Starting phase
   // by sending Shutdown which should stop the actor cleanly
   process.send(actor_subject, types.Shutdown)

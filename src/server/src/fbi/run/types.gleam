@@ -61,4 +61,11 @@ pub type TerminalEvent {
   StateChanged(state: String)
   TitleChanged(title: String)
   Snapshot(ansi: String, cols: Int, rows: Int, byte_offset: Int)
+  UsageSnap(
+    model: String,
+    input_tokens: Int,
+    output_tokens: Int,
+    cache_read_tokens: Int,
+    cache_create_tokens: Int,
+  )
 }

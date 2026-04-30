@@ -82,17 +82,21 @@ fn do_real_launch(input: LaunchInput) -> Result(#(String, String), String) {
     input.config,
     on_log,
   ))
-  use _ <- result.try(setup_run_dir(input))
   let container_name = "fbi-run-" <> run_id
-  // Remove any pre-existing container with this name. Cancel paths and
-  // crash recovery don't always reach transition_to_finishing (which is
-  // the only place that calls remove_container), so retrying the same
-  // run id otherwise hits a "container name in use" error from Docker.
-  // force=true also handles the case where it's still running.
+  // Remove any pre-existing container with this name BEFORE setup_run_dir.
+  // Cancel paths and crash recovery don't always reach
+  // transition_to_finishing (which is the only place that calls
+  // remove_container), so retrying the same run id otherwise hits a
+  // "container name in use" error from Docker. force=true also handles
+  // the case where it's still running. Order matters: while an old
+  // container holds the bind mount on run_dir/state, `del_dir_r` fails
+  // with EBUSY and stale state files (notably result.json) survive into
+  // the new run.
   let _ =
     with_docker(input.config.docker_socket, fn(sock) {
       docker.remove_container(sock, container_name, True)
     })
+  use _ <- result.try(setup_run_dir(input))
   let spec = container_spec(input, image_tag)
   wisp.log_debug("run " <> run_id <> ": creating container image=" <> image_tag)
   use cid <- result.try(
@@ -127,12 +131,20 @@ fn do_mock_launch(input: LaunchInput) -> Result(#(String, String), String) {
     Some(p) -> Ok(p)
     None -> Error("FBI_QUANTICO_BINARY_PATH not set; mock runs require it")
   })
-  use _ <- result.try(setup_run_dir(input))
+  // Force-remove any prior container with this name BEFORE setup_run_dir.
+  // SQLite reuses rowids when prior runs are deleted (no AUTOINCREMENT),
+  // so a fresh run can land on an id whose state dir is still bind-mounted
+  // by a not-yet-removed container. While that bind mount is alive, the
+  // host-side `del_dir_r` of run_dir/state can't remove the directory
+  // (EBUSY) and stale files (notably result.json) survive — read_outcome
+  // then mistakes the *prior* run's exit code for the new run's, which is
+  // exactly the source of the hang-test "succeeded" flake.
   let container_name = "fbi-run-" <> run_id
   let _ =
     with_docker(input.config.docker_socket, fn(sock) {
       docker.remove_container(sock, container_name, True)
     })
+  use _ <- result.try(setup_run_dir(input))
   let spec = mock_container_spec(input, quantico_path, scenario)
   wisp.log_debug(
     "run " <> run_id <> ": creating mock container scenario=" <> scenario,
@@ -417,6 +429,14 @@ fn setup_run_dir(input: LaunchInput) -> Result(Nil, String) {
   let _ = simplifile.delete(run_dir <> "/state")
   let _ = simplifile.delete(run_dir <> "/wip")
   let _ = simplifile.delete(scripts_dir)
+  // Belt-and-suspenders: even if `delete(run_dir/state)` fails (EBUSY
+  // when a prior container still has the bind mount), nuke the
+  // individual signal files by path so read_outcome / poll_status_loop
+  // can't see stale values from the previous run id.
+  let _ = simplifile.delete(run_dir <> "/state/result.json")
+  let _ = simplifile.delete(run_dir <> "/state/agent-status")
+  let _ = simplifile.delete(run_dir <> "/state/session-id")
+  let _ = simplifile.delete(run_dir <> "/state/ready")
   use _ <- result.try(
     simplifile.create_directory_all(scripts_dir)
     |> result.map_error(fn(e) {

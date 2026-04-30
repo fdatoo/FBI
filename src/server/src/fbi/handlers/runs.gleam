@@ -169,6 +169,7 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
                           ctx.db,
                           ctx.config,
                           new_run.id,
+                          ctx.pubsub,
                         )
                       {
                         Error(reason) -> {
@@ -235,7 +236,13 @@ fn do_resume_now(ctx: Context, id: Int) -> Response {
     Ok(run) ->
       case run.state {
         "awaiting_resume" -> {
-          run_reattach.resurrect(run, ctx.db, ctx.config, ctx.run_registry)
+          run_reattach.resurrect(
+            run,
+            ctx.db,
+            ctx.config,
+            ctx.run_registry,
+            ctx.pubsub,
+          )
           wisp.response(202)
         }
         _ -> wisp.bad_request("Run is not awaiting_resume")
@@ -298,6 +305,7 @@ fn create(req: Request, ctx: Context, project_id: Int) -> Response {
                   ctx.db,
                   ctx.config,
                   run.id,
+                  ctx.pubsub,
                 )
               {
                 Error(reason) -> {

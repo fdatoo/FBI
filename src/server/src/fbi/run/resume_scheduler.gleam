@@ -1,6 +1,7 @@
 import fbi/config.{type Config}
 import fbi/db/connection
 import fbi/db/runs
+import fbi/pubsub
 import fbi/run/reattach
 import fbi/run/registry.{type RegistryMsg}
 import gleam/erlang/process
@@ -24,6 +25,7 @@ type State {
     db: sqlight.Connection,
     config: Config,
     registry: process.Subject(RegistryMsg),
+    pubsub: process.Subject(pubsub.PubsubMsg),
     self: process.Subject(ResumeMsg),
   )
 }
@@ -32,10 +34,17 @@ pub fn start(
   db: sqlight.Connection,
   config: Config,
   registry: process.Subject(RegistryMsg),
+  pubsub_subject: process.Subject(pubsub.PubsubMsg),
 ) -> Result(process.Subject(ResumeMsg), actor.StartError) {
   actor.new_with_initialiser(500, fn(subject) {
     process.send_after(subject, interval_ms, Tick)
-    State(db: db, config: config, registry: registry, self: subject)
+    State(
+      db: db,
+      config: config,
+      registry: registry,
+      pubsub: pubsub_subject,
+      self: subject,
+    )
     |> actor.initialised
     |> actor.returning(subject)
     |> actor.selecting(process.new_selector() |> process.select(subject))
@@ -71,7 +80,13 @@ fn tick(state: State) -> Nil {
         <> " run(s)",
       )
       list.each(due, fn(run) {
-        reattach.resurrect(run, state.db, state.config, state.registry)
+        reattach.resurrect(
+          run,
+          state.db,
+          state.config,
+          state.registry,
+          state.pubsub,
+        )
       })
     }
   }

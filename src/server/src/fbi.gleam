@@ -53,9 +53,10 @@ pub fn main() {
 
   let assert Ok(registry) = run_registry.start()
   let assert Ok(pubsub_subject) = pubsub.start()
-  reattach.run_all(db, cfg, registry)
+  reattach.run_all(db, cfg, registry, pubsub_subject)
   let assert Ok(_gc_scheduler) = gc_scheduler.start(db, cfg)
-  let assert Ok(_resume_scheduler) = resume_scheduler.start(db, cfg, registry)
+  let assert Ok(_resume_scheduler) =
+    resume_scheduler.start(db, cfg, registry, pubsub_subject)
   let ctx =
     Context(db: db, config: cfg, run_registry: registry, pubsub: pubsub_subject)
 

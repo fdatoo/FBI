@@ -3,6 +3,7 @@ import fbi/db/connection
 import fbi/db/projects
 import fbi/db/runs.{type Run, type RunOutcome, RunOutcome}
 import fbi/docker
+import fbi/pubsub
 import fbi/run/actor as run_actor
 import fbi/run/broadcaster
 import fbi/run/registry.{type RegistryMsg, Register}
@@ -25,6 +26,7 @@ pub fn run_all(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Nil {
   case runs.list_non_terminal(db) {
     Error(e) ->
@@ -35,7 +37,9 @@ pub fn run_all(
       wisp.log_info(
         "reattach: " <> int.to_string(list.length(rs)) <> " non-terminal run(s)",
       )
-      list.each(rs, fn(run) { reattach_one(run, db, config, registry) })
+      list.each(rs, fn(run) {
+        reattach_one(run, db, config, registry, pubsub_subject)
+      })
     }
   }
 }
@@ -45,6 +49,7 @@ fn reattach_one(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Nil {
   case run.state {
     "queued" -> {
@@ -54,8 +59,10 @@ fn reattach_one(
       let _ = runs.delete(db, run.id)
       Nil
     }
-    "running" | "waiting" -> reattach_active(run, db, config, registry)
-    "awaiting_resume" -> reattach_awaiting(run, db, config, registry)
+    "running" | "waiting" ->
+      reattach_active(run, db, config, registry, pubsub_subject)
+    "awaiting_resume" ->
+      reattach_awaiting(run, db, config, registry, pubsub_subject)
     _ -> Nil
   }
 }
@@ -65,6 +72,7 @@ fn reattach_active(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Nil {
   case run.container_id {
     None -> {
@@ -108,7 +116,7 @@ fn reattach_active(
         }
         Ok(docker.ContainerExited(code)) -> finish_exited(run, db, config, code)
         Ok(docker.ContainerRunning) ->
-          attach_live(run, cid, db, config, registry)
+          attach_live(run, cid, db, config, registry, pubsub_subject)
       }
     }
   }
@@ -120,6 +128,7 @@ fn attach_live(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Nil {
   wisp.log_info(
     "reattach: run "
@@ -146,6 +155,7 @@ fn attach_live(
           config,
           bc,
           registry,
+          pubsub_subject,
         )
       {
         Error(_) -> {
@@ -156,8 +166,6 @@ fn attach_live(
         }
         Ok(actor_subject) -> {
           process.send(registry, Register(run.id, actor_subject))
-          // Make sure DB state is "running" with the right cid (idempotent if
-          // it was already running; corrects a stale "waiting" transition).
           let _ = runs.mark_running(db, run.id, cid, now_ms())
           Nil
         }
@@ -189,10 +197,11 @@ fn reattach_awaiting(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Nil {
   let now = now_ms()
   case run.next_resume_at {
-    Some(t) if t <= now -> resurrect(run, db, config, registry)
+    Some(t) if t <= now -> resurrect(run, db, config, registry, pubsub_subject)
     _ -> {
       wisp.log_debug(
         "reattach: run "
@@ -212,6 +221,7 @@ pub fn resurrect(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
 ) -> Nil {
   case run.claude_session_id {
     None -> {
@@ -264,7 +274,6 @@ pub fn resurrect(
                 <> " as continue run "
                 <> int.to_string(child.id),
               )
-              // Mark the parent as succeeded so the chain terminates cleanly.
               let _ =
                 runs.mark_finished(
                   db,
@@ -279,8 +288,7 @@ pub fn resurrect(
                   ),
                   now,
                 )
-              // Start a supervisor + worker for the new child.
-              case supervisor_start(db, config, registry, child.id) {
+              case supervisor_start(db, config, registry, pubsub_subject, child.id) {
                 Error(reason) ->
                   wisp.log_warning(
                     "reattach: supervisor_start for child "
@@ -314,6 +322,7 @@ fn supervisor_start(
   db: sqlight.Connection,
   config: Config,
   registry: Subject(RegistryMsg),
+  pubsub_subject: Subject(pubsub.PubsubMsg),
   run_id: Int,
 ) -> Result(#(Subject(RunMsg), Subject(BroadcastMsg)), String) {
   use bc <- result.try(
@@ -321,7 +330,7 @@ fn supervisor_start(
     |> result.map_error(fn(_) { "failed to start broadcaster" }),
   )
   use actor_subject <- result.try(
-    run_actor.start(run_id, db, config, bc, registry)
+    run_actor.start(run_id, db, config, bc, registry, pubsub_subject)
     |> result.map_error(fn(_) { "failed to start run actor" }),
   )
   process.send(registry, Register(run_id, actor_subject))

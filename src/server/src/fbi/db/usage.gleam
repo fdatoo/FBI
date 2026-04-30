@@ -218,20 +218,14 @@ pub type BucketRow {
 
 /// Returns the full UsageState as a json.Json value (not yet serialised).
 /// Callers can embed it in a larger envelope or call json.to_string().
-pub fn get_usage_state_value(
-  db: sqlight.Connection,
-  now_ms: Int,
-) -> json.Json {
+pub fn get_usage_state_value(db: sqlight.Connection, now_ms: Int) -> json.Json {
   let state = load_state_row(db)
   let buckets = load_bucket_rows(db)
   encode_usage_state(state, buckets, now_ms)
 }
 
 /// Convenience: returns the state as a serialised JSON string.
-pub fn get_usage_state_json(
-  db: sqlight.Connection,
-  now_ms: Int,
-) -> String {
+pub fn get_usage_state_json(db: sqlight.Connection, now_ms: Int) -> String {
   get_usage_state_value(db, now_ms) |> json.to_string()
 }
 
@@ -313,19 +307,18 @@ fn encode_usage_state(
           #("id", json.string(b.id)),
           #("utilization", json.float(b.utilization)),
           #("reset_at", json.nullable(b.reset_at, json.int)),
-          #(
-            "window_started_at",
-            json.nullable(b.window_started_at, json.int),
-          ),
+          #("window_started_at", json.nullable(b.window_started_at, json.int)),
         ])
       }),
     ),
     #(
       "pacing",
-      json.object(list.map(pacing_entries, fn(entry) {
-        let #(id, verdict) = entry
-        #(id, encode_pacing(verdict))
-      })),
+      json.object(
+        list.map(pacing_entries, fn(entry) {
+          let #(id, verdict) = entry
+          #(id, encode_pacing(verdict))
+        }),
+      ),
     ),
   ])
 }
@@ -358,7 +351,7 @@ fn pacing_for_bucket(b: BucketRow, now_ms: Int) -> PacingVerdict {
           let zone = case delta >=. 0.25 {
             True -> Hot
             False ->
-              case delta <=. -0.20 {
+              case delta <=. -0.2 {
                 True -> Chill
                 False -> OnTrack
               }

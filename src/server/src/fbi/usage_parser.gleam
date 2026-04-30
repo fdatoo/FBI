@@ -114,20 +114,12 @@ fn message_decoder() -> decode.Decoder(MessageData) {
   use input_tokens <- decode.optional_field(
     "usage",
     None,
-    decode.optional(decode.field(
-      "input_tokens",
-      decode.int,
-      decode.success,
-    )),
+    decode.optional(decode.field("input_tokens", decode.int, decode.success)),
   )
   use output_tokens <- decode.optional_field(
     "usage",
     None,
-    decode.optional(decode.field(
-      "output_tokens",
-      decode.int,
-      decode.success,
-    )),
+    decode.optional(decode.field("output_tokens", decode.int, decode.success)),
   )
   use cache_read <- decode.optional_field(
     "usage",

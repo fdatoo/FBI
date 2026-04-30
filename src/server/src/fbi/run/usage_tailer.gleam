@@ -46,8 +46,7 @@ pub fn start(
   pubsub_subject: Subject(pubsub.PubsubMsg),
   broadcaster: Subject(BroadcastMsg),
 ) -> Result(Subject(TailerMsg), actor.StartError) {
-  let mount_dir =
-    config.runs_dir <> "/" <> int.to_string(run_id) <> "/mount"
+  let mount_dir = config.runs_dir <> "/" <> int.to_string(run_id) <> "/mount"
   actor.new_with_initialiser(500, fn(subject) {
     process.send_after(subject, poll_interval_ms, Tick)
     State(
@@ -64,9 +63,7 @@ pub fn start(
     |> actor.selecting(process.new_selector() |> process.select(subject))
     |> Ok
   })
-  |> actor.on_message(fn(state: State, msg: TailerMsg) {
-    handle(state, msg)
-  })
+  |> actor.on_message(fn(state: State, msg: TailerMsg) { handle(state, msg) })
   |> actor.start
   |> result.map(fn(started) { started.data })
 }

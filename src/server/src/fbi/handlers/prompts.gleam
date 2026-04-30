@@ -19,11 +19,7 @@ pub fn handle_recent(
   }
 }
 
-fn serve_recent(
-  req: Request,
-  ctx: Context,
-  project_id_str: String,
-) -> Response {
+fn serve_recent(req: Request, ctx: Context, project_id_str: String) -> Response {
   case int.parse(project_id_str) {
     Error(_) -> wisp.bad_request("Invalid project ID")
     Ok(pid) -> {

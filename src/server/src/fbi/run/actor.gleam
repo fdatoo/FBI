@@ -100,8 +100,7 @@ pub fn start_attached(
       }
     }
     // Start the tailer immediately for reattached runs
-    let tailer =
-      start_tailer(run_id, config, db, pubsub_subject, bc)
+    let tailer = start_tailer(run_id, config, db, pubsub_subject, bc)
     State(
       run_id: run_id,
       db: db,
@@ -311,7 +310,8 @@ fn transition_to_running(
       None
     }
   }
-  let tailer = start_tailer(state.run_id, state.config, state.db, state.pubsub, bc)
+  let tailer =
+    start_tailer(state.run_id, state.config, state.db, state.pubsub, bc)
   actor.continue(
     State(
       ..state,

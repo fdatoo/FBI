@@ -288,7 +288,9 @@ pub fn resurrect(
                   ),
                   now,
                 )
-              case supervisor_start(db, config, registry, pubsub_subject, child.id) {
+              case
+                supervisor_start(db, config, registry, pubsub_subject, child.id)
+              {
                 Error(reason) ->
                   wisp.log_warning(
                     "reattach: supervisor_start for child "

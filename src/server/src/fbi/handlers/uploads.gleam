@@ -27,11 +27,7 @@ pub fn handle_draft_file(
   }
 }
 
-pub fn handle_run_uploads(
-  req: Request,
-  _ctx: Context,
-  _id: String,
-) -> Response {
+pub fn handle_run_uploads(req: Request, _ctx: Context, _id: String) -> Response {
   case req.method {
     http.Get ->
       json.object([#("files", json.array([], json.string))])

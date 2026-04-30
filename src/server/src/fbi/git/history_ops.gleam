@@ -81,7 +81,10 @@ pub fn mirror_rebase(
   }
 }
 
-pub fn sync_in_container(config: Config, cid: String) -> Result(Outcome, String) {
+pub fn sync_in_container(
+  config: Config,
+  cid: String,
+) -> Result(Outcome, String) {
   exec_in_container(config, cid, "cd /workspace && git pull --no-rebase 2>&1")
 }
 

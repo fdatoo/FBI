@@ -18,7 +18,11 @@ pub fn handle_global(req: Request, ctx: Context) -> Response {
   }
 }
 
-pub fn handle_global_one(req: Request, ctx: Context, id_str: String) -> Response {
+pub fn handle_global_one(
+  req: Request,
+  ctx: Context,
+  id_str: String,
+) -> Response {
   case int.parse(id_str) {
     Error(_) -> wisp.bad_request("Invalid MCP server ID")
     Ok(id) ->

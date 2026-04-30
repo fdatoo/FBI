@@ -177,12 +177,23 @@ fn run_scenario(
     let argv: Vec<String> = std::env::args().skip(1).collect();
 
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home/agent".into());
+    let state_dir = std::env::var("FBI_STATE_DIR")
+        .ok()
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            let p = std::path::PathBuf::from("/fbi-state");
+            if p.exists() { Some(p) } else { None }
+        });
     let session_id = match resume_session_id {
         Some(id) => {
             let path = jsonl::session_path(&home, &cwd, id);
             if !path.exists() {
-                eprintln!("Error: session {} not found", id);
-                return 1;
+                // No historical JSONL in this container — create a stub so
+                // quantico can still emit the resume marker for mock tests.
+                if let Some(parent) = path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let _ = crate::jsonl::append(&path, "user", "(mock resume stub)");
             }
             id.to_string()
         }
@@ -191,6 +202,14 @@ fn run_scenario(
     let session_path = jsonl::session_path(&home, &cwd, &session_id);
     if let Some(parent) = session_path.parent() {
         let _ = std::fs::create_dir_all(parent);
+    }
+    // Publish the session id to FBI_STATE_DIR/session-id so the FBI server can
+    // pick it up even for runs that never exit (e.g. limit-breach + sleep_forever).
+    // Without this, claude_session_id stays NULL and resurrect can't continue
+    // the run when /resume-now is called.
+    if let Some(ref dir) = state_dir {
+        let _ = std::fs::create_dir_all(dir);
+        let _ = std::fs::write(dir.join("session-id"), &session_id);
     }
     if resume_session_id.is_some() {
         use std::io::Write;
@@ -206,8 +225,9 @@ fn run_scenario(
         cwd,
         argv,
         session_path,
+        state_dir: state_dir.clone(),
     };
-    match executor::run(&scenario, &mut ctx) {
+    let exit_code = match executor::run(&scenario, &mut ctx) {
         Ok(executor::Outcome::Exited(c)) => c,
         Ok(executor::Outcome::SleepingForever) => {
             // Block forever (until SIGKILL). SIGTERM honoured by default.
@@ -219,7 +239,17 @@ fn run_scenario(
             let _ = writeln!(std::io::stderr(), "quantico: io error: {}", e);
             1
         }
+    };
+    // Write result.json so the FBI server can read the session_id and exit_code.
+    if let Some(dir) = state_dir {
+        let _ = std::fs::create_dir_all(&dir);
+        let result = format!(
+            "{{\"session_id\":\"{}\",\"exit_code\":{},\"push_exit\":0,\"head_sha\":\"\",\"branch\":\"\"}}",
+            session_id, exit_code
+        );
+        let _ = std::fs::write(dir.join("result.json"), result);
     }
+    exit_code
 }
 
 #[cfg(test)]
@@ -306,6 +336,7 @@ mod tests {
                 cwd: "/".into(),
                 argv: vec![],
                 session_path: PathBuf::from("/tmp/dummy-garbled-test.jsonl"),
+                state_dir: None,
             };
             let _ = executor::run(&scenario, &mut ctx);
         }

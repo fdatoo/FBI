@@ -264,6 +264,7 @@ pub fn resurrect(
                 <> " as continue run "
                 <> int.to_string(child.id),
               )
+              let _ = runs.increment_resume_attempts(db, run.id)
               // Mark the parent as succeeded so the chain terminates cleanly.
               let _ =
                 runs.mark_finished(

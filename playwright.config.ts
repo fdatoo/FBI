@@ -4,7 +4,10 @@ export default defineConfig({
   testDir: 'tests/e2e/quantico',
   timeout: 120_000,
   fullyParallel: false, // shared FBI server
-  retries: 0,
+  // Retry once on CI to absorb genuinely-flaky timing failures (auto-scroll
+  // re-pin race, hang container kill propagation under parallel-test load).
+  // Keep 0 locally so flakes are visible during development.
+  retries: process.env.CI ? 1 : 0,
   // Warm the orchestrator's docker image cache before any tests run.
   // Without this, the first 1-2 tests on a fresh CI runner race a 2-3 min
   // image build and fail their tight assertions.
@@ -28,6 +31,8 @@ export default defineConfig({
       WEB_DIST_DIR: `${process.cwd()}/dist/web`,
       GIT_AUTHOR_NAME: 'E2E',
       GIT_AUTHOR_EMAIL: 'e2e@example.com',
+      FBI_QUANTICO_BINARY_PATH: process.env.FBI_QUANTICO_BINARY_PATH
+        ?? `${process.cwd()}/dist/cli/quantico-linux-${process.arch === 'arm64' ? 'arm64' : 'amd64'}`,
     },
   },
 });

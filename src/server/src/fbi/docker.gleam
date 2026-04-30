@@ -379,7 +379,7 @@ pub fn start_bidirectional_attach(
   id: String,
 ) -> Result(BitArray, DockerError) {
   let path =
-    "/containers/" <> id <> "/attach?stream=1&stdin=1&stdout=1&stderr=1"
+    "/containers/" <> id <> "/attach?stream=1&stdin=1&stdout=1&stderr=1&logs=1"
   let header_str =
     "POST "
     <> path

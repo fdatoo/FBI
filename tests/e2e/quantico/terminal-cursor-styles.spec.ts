@@ -14,6 +14,7 @@ test('cursor-styles: snapshot reload reproduces live state', async ({ page }) =>
   const run = await createMockRun(page, { scenario: 'cursor-styles' });
   try {
     await run.waitForFinalState();
+    // 500ms settle so trailing BroadcastChunk messages drain before polling.
     await page.waitForTimeout(500);
     // The cursor-styles scenario uses DECSC (`\x1b7`) + DECRC (`\x1b8`) to
     // jump to row 10, write "saved here", then restore. The Rust snapshot
@@ -22,6 +23,7 @@ test('cursor-styles: snapshot reload reproduces live state', async ({ page }) =>
     // present in both the live and reload views — the post-restore text
     // "back at saved cursor" — and assert the suffix matches.
     const marker = 'back at saved cursor';
+    await run.waitForTerminalText(marker, { timeoutMs: 15_000 });
     const liveText = await run.terminalTextFrom(marker);
     expect(liveText).not.toBe('');
 

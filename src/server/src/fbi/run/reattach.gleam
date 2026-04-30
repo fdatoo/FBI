@@ -2,6 +2,7 @@ import fbi/config.{type Config}
 import fbi/db/connection
 import fbi/db/projects
 import fbi/db/runs.{type Run, type RunOutcome, RunOutcome}
+import fbi/db/settings
 import fbi/docker
 import fbi/pubsub
 import fbi/run/actor as run_actor
@@ -301,6 +302,10 @@ pub fn resurrect(
                     <> reason,
                   )
                 Ok(#(actor_subject, bc)) -> {
+                  let global_prompt = case settings.get(db) {
+                    Ok(s) -> s.global_prompt
+                    Error(_) -> ""
+                  }
                   run_worker.launch(
                     run_worker.LaunchInput(
                       run: child,
@@ -309,6 +314,7 @@ pub fn resurrect(
                       cols: 80,
                       rows: 24,
                       broadcaster: bc,
+                      global_prompt: global_prompt,
                     ),
                     actor_subject,
                   )
@@ -383,7 +389,15 @@ fn read_outcome(state_dir: String, exit_code: Int) -> RunOutcome {
         use head_sha <- decode.optional_field("head_sha", "", decode.string)
         use branch <- decode.optional_field("branch", "", decode.string)
         use session_id <- decode.optional_field("session_id", "", decode.string)
-        decode.success(#(agent_exit, push_exit, head_sha, branch, session_id))
+        use title <- decode.optional_field("title", "", decode.string)
+        decode.success(#(
+          agent_exit,
+          push_exit,
+          head_sha,
+          branch,
+          session_id,
+          title,
+        ))
       }
       case json.parse(json_str, decoder) {
         Error(_) ->
@@ -395,7 +409,7 @@ fn read_outcome(state_dir: String, exit_code: Int) -> RunOutcome {
             error_message: Some("could not parse result.json"),
             claude_session_id: None,
           )
-        Ok(#(agent_exit, push_exit, head_sha, branch, session_id)) ->
+        Ok(#(agent_exit, push_exit, head_sha, branch, session_id, title)) ->
           RunOutcome(
             exit_code: agent_exit,
             branch_pushed: case push_exit {
@@ -410,7 +424,10 @@ fn read_outcome(state_dir: String, exit_code: Int) -> RunOutcome {
               "" -> None
               sha -> Some(sha)
             },
-            title: None,
+            title: case title {
+              "" -> None
+              t -> Some(t)
+            },
             error_message: case agent_exit {
               0 -> None
               code -> Some("agent exit " <> int.to_string(code))

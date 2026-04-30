@@ -29,6 +29,7 @@ pub type LaunchInput {
     cols: Int,
     rows: Int,
     broadcaster: Subject(BroadcastMsg),
+    global_prompt: String,
   )
 }
 
@@ -393,7 +394,19 @@ fn is_regular_directory(path: String) -> Bool {
 fn path_dirname(path: String) -> String
 
 fn build_preamble(input: LaunchInput) -> dict.Dict(String, BitArray) {
+  let preamble =
+    "# FBI Session Setup\n\n"
+    <> "Before starting the task, run these two setup steps:\n\n"
+    <> "1. Write a concise title (max 60 chars) describing this task:\n"
+    <> "   echo 'Brief task title' > /fbi-state/title\n\n"
+    <> "2. If your current branch starts with \"claude/run-\", rename it to a\n"
+    <> "   short descriptive kebab-case name reflecting the task:\n"
+    <> "   git branch -m feat/your-task-description\n"
+    <> "   (Skip if the branch already has a meaningful name.)\n\n"
+    <> "After the setup steps, proceed with the task."
   dict.from_list([
+    #("preamble.txt", bit_array.from_string(preamble)),
+    #("global.txt", bit_array.from_string(input.global_prompt)),
     #("prompt.txt", bit_array.from_string(input.run.prompt)),
     #(
       "instructions.txt",

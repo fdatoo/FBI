@@ -2,6 +2,7 @@ import fbi/context.{type Context}
 import fbi/db/connection
 import fbi/db/projects
 import fbi/db/runs
+import fbi/db/secrets as db_secrets
 import fbi/db/settings
 import fbi/json/run as run_json
 import fbi/run/reattach as run_reattach
@@ -187,6 +188,12 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
                             Ok(s) -> s.global_prompt
                             Error(_) -> ""
                           }
+                          let secrets =
+                            db_secrets.list_plaintext(
+                              ctx.db,
+                              project.id,
+                              ctx.config.secrets_key,
+                            )
                           run_worker.launch(
                             run_worker.LaunchInput(
                               run: new_run,
@@ -196,6 +203,7 @@ fn do_continue(req: Request, ctx: Context, run_id: Int) -> Response {
                               rows: 24,
                               broadcaster: bc,
                               global_prompt: global_prompt,
+                              secrets: secrets,
                             ),
                             actor_subject,
                           )
@@ -417,6 +425,12 @@ fn do_create(
           wisp.internal_server_error()
         }
         Ok(#(actor_subject, bc)) -> {
+          let secrets =
+            db_secrets.list_plaintext(
+              ctx.db,
+              project.id,
+              ctx.config.secrets_key,
+            )
           run_worker.launch(
             run_worker.LaunchInput(
               run: run,
@@ -426,6 +440,7 @@ fn do_create(
               rows: 24,
               broadcaster: bc,
               global_prompt: global_prompt,
+              secrets: secrets,
             ),
             actor_subject,
           )

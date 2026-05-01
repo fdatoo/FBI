@@ -2,6 +2,7 @@ import fbi/config.{type Config}
 import fbi/db/connection
 import fbi/db/projects
 import fbi/db/runs.{type Run, type RunOutcome, RunOutcome}
+import fbi/db/secrets as db_secrets
 import fbi/db/settings
 import fbi/docker
 import fbi/pubsub
@@ -306,6 +307,12 @@ pub fn resurrect(
                     Ok(s) -> s.global_prompt
                     Error(_) -> ""
                   }
+                  let secrets =
+                    db_secrets.list_plaintext(
+                      db,
+                      project.id,
+                      config.secrets_key,
+                    )
                   run_worker.launch(
                     run_worker.LaunchInput(
                       run: child,
@@ -315,6 +322,7 @@ pub fn resurrect(
                       rows: 24,
                       broadcaster: bc,
                       global_prompt: global_prompt,
+                      secrets: secrets,
                     ),
                     actor_subject,
                   )

@@ -1,6 +1,7 @@
 import fbi/config.{type Config}
 import fbi/db/projects
 import fbi/db/runs as runs_db
+import fbi/db/secrets as db_secrets
 import fbi/db/settings
 import fbi/docker
 import fbi/git.{type GitError}
@@ -186,6 +187,12 @@ fn dispatch_child(
                     Ok(s) -> s.global_prompt
                     Error(_) -> ""
                   }
+                  let secrets =
+                    db_secrets.list_plaintext(
+                      db,
+                      project.id,
+                      config.secrets_key,
+                    )
                   run_worker.launch(
                     run_worker.LaunchInput(
                       run: child,
@@ -195,6 +202,7 @@ fn dispatch_child(
                       rows: 24,
                       broadcaster: bc,
                       global_prompt: global_prompt,
+                      secrets: secrets,
                     ),
                     actor_subj,
                   )

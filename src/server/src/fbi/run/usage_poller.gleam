@@ -9,6 +9,7 @@ import gleam/http/request
 import gleam/httpc
 import gleam/int
 import gleam/json
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/result
@@ -26,6 +27,8 @@ const client_id = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 const poll_interval_ms = 300_000
 
 const five_hour_window_ms = 18_000_000
+
+const seven_day_window_ms = 604_800_000
 
 // Refresh the access token when it has less than 30 minutes left.
 const refresh_threshold_ms = 1_800_000
@@ -303,19 +306,45 @@ fn credentials_decoder() -> decode.Decoder(#(String, Int)) {
   decode.success(pair)
 }
 
-fn five_hour_decoder() -> decode.Decoder(#(Float, Option(String))) {
+type BucketData {
+  BucketData(utilization: Float, resets_at: Option(String))
+}
+
+type UsageResponse {
+  UsageResponse(
+    five_hour: BucketData,
+    weekly: Option(BucketData),
+    sonnet_weekly: Option(BucketData),
+  )
+}
+
+fn bucket_decoder() -> decode.Decoder(BucketData) {
   use util <- decode.field("utilization", float_or_int_decoder())
   use resets_at <- decode.optional_field(
     "resets_at",
     None,
     decode.optional(decode.string),
   )
-  decode.success(#(util, resets_at))
+  decode.success(BucketData(utilization: util, resets_at: resets_at))
 }
 
-fn usage_decoder() -> decode.Decoder(#(Float, Option(String))) {
-  use data <- decode.field("five_hour", five_hour_decoder())
-  decode.success(data)
+fn usage_decoder() -> decode.Decoder(UsageResponse) {
+  use five_hour <- decode.field("five_hour", bucket_decoder())
+  use weekly <- decode.optional_field(
+    "seven_day",
+    None,
+    decode.optional(bucket_decoder()),
+  )
+  use sonnet_weekly <- decode.optional_field(
+    "seven_day_sonnet",
+    None,
+    decode.optional(bucket_decoder()),
+  )
+  decode.success(UsageResponse(
+    five_hour: five_hour,
+    weekly: weekly,
+    sonnet_weekly: sonnet_weekly,
+  ))
 }
 
 fn float_or_int_decoder() -> decode.Decoder(Float) {
@@ -327,6 +356,17 @@ fn parse_reset_at(iso: String) -> Option(Int) {
     Ok(ms) -> Some(ms)
     Error(_) -> None
   }
+}
+
+fn upsert_bucket(db, bucket_id, b: BucketData, window_ms, now) {
+  let util = b.utilization /. 100.0
+  let reset_at = option.then(b.resets_at, parse_reset_at)
+  let result = usage_db.upsert_bucket(db, bucket_id, util, reset_at, now)
+  case reset_at {
+    None -> Nil
+    Some(r) -> usage_db.set_window_start(db, bucket_id, r - window_ms)
+  }
+  result
 }
 
 fn fetch_and_store(state: State, token: String) -> Nil {
@@ -341,24 +381,40 @@ fn fetch_and_store(state: State, token: String) -> Nil {
           wisp.log_warning("usage poller: unexpected response shape")
           Nil
         }
-        Ok(#(util_pct, resets_at_str)) -> {
+        Ok(resp) -> {
           let now = now_ms()
-          let util = util_pct /. 100.0
-          let reset_at = option.then(resets_at_str, parse_reset_at)
-
           let _ = usage_db.upsert_rate_limit_state(state.db, None, now)
-          let bucket_result =
-            usage_db.upsert_bucket(state.db, "five_hour", util, reset_at, now)
 
-          case reset_at {
-            None -> Nil
-            Some(r) ->
-              usage_db.set_window_start(
+          let five_hr_result =
+            upsert_bucket(
+              state.db,
+              "five_hour",
+              resp.five_hour,
+              five_hour_window_ms,
+              now,
+            )
+          let weekly_result =
+            option.map(resp.weekly, fn(b) {
+              upsert_bucket(state.db, "weekly", b, seven_day_window_ms, now)
+            })
+          let sonnet_result =
+            option.map(resp.sonnet_weekly, fn(b) {
+              upsert_bucket(
                 state.db,
-                "five_hour",
-                r - five_hour_window_ms,
+                "sonnet_weekly",
+                b,
+                seven_day_window_ms,
+                now,
               )
-          }
+            })
+          let threshold_events =
+            [Some(five_hr_result), weekly_result, sonnet_result]
+            |> list.flat_map(fn(x) {
+              case x {
+                None -> []
+                Some(v) -> [v]
+              }
+            })
 
           let state_json = usage_db.get_usage_state_value(state.db, now)
           let snapshot =
@@ -372,23 +428,25 @@ fn fetch_and_store(state: State, token: String) -> Nil {
             pubsub.Publish(topic: "usage", message: to_dynamic(snapshot)),
           )
 
-          case bucket_result {
-            Ok(usage_db.ThresholdCrossed(bid, thresh, r)) -> {
-              let msg =
-                json.object([
-                  #("type", json.string("threshold_crossed")),
-                  #("bucket_id", json.string(bid)),
-                  #("threshold", json.int(thresh)),
-                  #("reset_at", json.nullable(r, json.int)),
-                ])
-                |> json.to_string()
-              process.send(
-                state.pubsub,
-                pubsub.Publish(topic: "usage", message: to_dynamic(msg)),
-              )
+          list.each(threshold_events, fn(result) {
+            case result {
+              Ok(usage_db.ThresholdCrossed(bid, thresh, r)) -> {
+                let msg =
+                  json.object([
+                    #("type", json.string("threshold_crossed")),
+                    #("bucket_id", json.string(bid)),
+                    #("threshold", json.int(thresh)),
+                    #("reset_at", json.nullable(r, json.int)),
+                  ])
+                  |> json.to_string()
+                process.send(
+                  state.pubsub,
+                  pubsub.Publish(topic: "usage", message: to_dynamic(msg)),
+                )
+              }
+              _ -> Nil
             }
-            _ -> Nil
-          }
+          })
 
           Nil
         }

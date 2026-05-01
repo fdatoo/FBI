@@ -18,6 +18,7 @@ import gleam/json
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
+import gleam/string
 import simplifile
 import wisp
 
@@ -30,6 +31,7 @@ pub type LaunchInput {
     rows: Int,
     broadcaster: Subject(BroadcastMsg),
     global_prompt: String,
+    secrets: List(#(String, String)),
   )
 }
 
@@ -268,9 +270,44 @@ fn build_env(input: LaunchInput) -> List(String) {
     "IS_SANDBOX=1",
   ]
   let with_model = list.append(base, model_env(input.run))
-  case resume_session_id(input.run) {
+  let with_resume = case resume_session_id(input.run) {
     None -> with_model
     Some(sid) -> list.append(with_model, ["FBI_RESUME_SESSION_ID=" <> sid])
+  }
+  let plugins =
+    list.append(
+      input.config.default_plugins,
+      parse_json_strings(input.project.plugins_json),
+    )
+  let with_plugins = case plugins {
+    [] -> with_resume
+    _ ->
+      list.append(with_resume, ["FBI_PLUGINS=" <> string.join(plugins, "\n")])
+  }
+  let marketplaces =
+    list.append(
+      input.config.default_marketplaces,
+      parse_json_strings(input.project.marketplaces_json),
+    )
+  let with_marketplaces = case marketplaces {
+    [] -> with_plugins
+    _ ->
+      list.append(with_plugins, [
+        "FBI_MARKETPLACES=" <> string.join(marketplaces, "\n"),
+      ])
+  }
+  let secret_env =
+    list.map(input.secrets, fn(s) {
+      let #(name, value) = s
+      name <> "=" <> value
+    })
+  list.append(with_marketplaces, secret_env)
+}
+
+fn parse_json_strings(json_str: String) -> List(String) {
+  case json.parse(json_str, decode.list(decode.string)) {
+    Ok(items) -> items
+    Error(_) -> []
   }
 }
 

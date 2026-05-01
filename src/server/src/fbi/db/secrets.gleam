@@ -2,6 +2,7 @@ import fbi/crypto
 import fbi/db/connection.{type DbError, SqlightError}
 import gleam/bit_array
 import gleam/dynamic/decode
+import gleam/list
 import gleam/result
 import sqlight
 
@@ -71,6 +72,42 @@ pub fn delete(
   )
   |> result.map_error(SqlightError)
   |> result.map(fn(_) { Nil })
+}
+
+/// Fetch all secrets for a project and return decrypted name/value pairs.
+/// Rows that fail to decrypt or have non-UTF-8 values are silently skipped.
+pub fn list_plaintext(
+  db: sqlight.Connection,
+  project_id: Int,
+  key: BitArray,
+) -> List(#(String, String)) {
+  let row_decoder = {
+    use name <- decode.field(0, decode.string)
+    use value_enc <- decode.field(1, decode.bit_array)
+    decode.success(#(name, value_enc))
+  }
+  case
+    connection.query_all(
+      "SELECT name, value_enc FROM project_secrets WHERE project_id = ? ORDER BY name",
+      db,
+      [sqlight.int(project_id)],
+      row_decoder,
+    )
+  {
+    Error(_) -> []
+    Ok(rows) ->
+      list.filter_map(rows, fn(row) {
+        let #(name, enc) = row
+        case crypto.decrypt(key, enc) {
+          Error(_) -> Error(Nil)
+          Ok(bits) ->
+            case bit_array.to_string(bits) {
+              Error(_) -> Error(Nil)
+              Ok(value) -> Ok(#(name, value))
+            }
+        }
+      })
+  }
 }
 
 fn secret_decoder() -> decode.Decoder(Secret) {

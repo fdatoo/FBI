@@ -114,9 +114,9 @@ export function McpServerList({ projectId, label = 'MCP servers' }: McpServerLis
                 </span>
               </div>
               <div className="flex gap-1.5 ml-3 shrink-0">
-                {Object.keys(s.env).length > 0 && (
+                {Object.keys(s.env ?? {}).length > 0 && (
                   <span className="text-xs text-green-600 dark:text-green-400">
-                    {Object.keys(s.env).length} env
+                    {Object.keys(s.env ?? {}).length} env
                   </span>
                 )}
                 <button

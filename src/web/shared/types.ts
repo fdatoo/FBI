@@ -100,7 +100,7 @@ export interface McpServer {
   command: string | null;
   args: string[];
   url: string | null;
-  env: Record<string, string>;
+  env: Record<string, string> | null;
   created_at: number;
 }
 

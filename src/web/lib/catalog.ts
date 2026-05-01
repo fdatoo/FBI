@@ -64,6 +64,15 @@ export const CATALOG: CatalogEntry[] = [
     requiredEnv: ['BRAVE_API_KEY'],
   },
   {
+    name: 'playwright',
+    description: 'Browser automation: screenshots, clicks, forms',
+    emoji: '🎭',
+    type: 'stdio',
+    command: 'npx',
+    args: ['-y', '@playwright/mcp'],
+    requiredEnv: [],
+  },
+  {
     name: 'memory',
     description: 'Persistent memory across runs',
     emoji: '💾',

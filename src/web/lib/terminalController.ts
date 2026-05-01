@@ -1,6 +1,6 @@
 import type { Terminal as Xterm } from '@xterm/xterm';
 import { acquireShell, releaseShell, getLastSnapshot } from './shellRegistry.js';
-import { publishUsage, publishState, publishTitle, publishChanges } from '../features/runs/usageBus.js';
+import { publishUsage, publishState, publishTitle, publishBranch, publishChanges } from '../features/runs/usageBus.js';
 import { record as traceRecord, strPreview } from './terminalTrace.js';
 import type { ShellHandle } from './ws.js';
 import { apiBase } from './api.js';
@@ -8,6 +8,7 @@ import type {
   UsageSnapshot,
   RunWsStateMessage,
   RunWsTitleMessage,
+  RunWsBranchMessage,
   ChangesPayload,
   RunState,
 } from '@shared/types.js';
@@ -70,6 +71,7 @@ export class TerminalController {
         publishState(runId, msg as unknown as RunWsStateMessage);
       }
       else if (msg.type === 'title') publishTitle(runId, msg as unknown as RunWsTitleMessage);
+      else if (msg.type === 'branch') publishBranch(runId, msg as unknown as RunWsBranchMessage);
       else if (msg.type === 'changes') publishChanges(runId, msg as unknown as ChangesPayload);
       else if (msg.type === 'driver_state') {
         const dm = msg as unknown as { is_driver: boolean };

@@ -16,7 +16,7 @@ import { computeShipDot } from '../features/runs/ship/computeShipDot.js';
 import { useBottomPaneHeight } from '../features/runs/useBottomPaneHeight.js';
 import type { ListeningPort } from '@shared/types.js';
 import { useKeyBinding } from '@ui/shell/KeyMap.js';
-import { subscribeState, subscribeTitle, subscribeChanges } from '../features/runs/usageBus.js';
+import { subscribeState, subscribeTitle, subscribeBranch, subscribeChanges } from '../features/runs/usageBus.js';
 import { UploadTray, type UploadTrayFile } from '../components/UploadTray.js';
 import { ContinueRunDialog } from '../components/ContinueRunDialog.js';
 import { acquireShell, releaseShell } from '../lib/shellRegistry.js';
@@ -118,6 +118,12 @@ export function RunDetailPage() {
   useEffect(() => {
     return subscribeTitle((id, frame) => {
       setRun((r) => r && r.id === id ? { ...r, title: frame.title, title_locked: frame.title_locked } : r);
+    });
+  }, []);
+
+  useEffect(() => {
+    return subscribeBranch((id, frame) => {
+      setRun((r) => r && r.id === id ? { ...r, branch_name: frame.branch_name } : r);
     });
   }, []);
 

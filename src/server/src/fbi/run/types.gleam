@@ -46,6 +46,8 @@ pub type RunMsg {
 
   // From container status watcher
   AgentStatusChanged(status: String)
+  TitleUpdated(title: String)
+  BranchUpdated(branch: String)
 }
 
 pub type BroadcastMsg {
@@ -60,6 +62,7 @@ pub type TerminalEvent {
   TerminalChunk(data: BitArray)
   StateChanged(state: String)
   TitleChanged(title: String)
+  BranchChanged(branch: String)
   Snapshot(ansi: String, cols: Int, rows: Int, byte_offset: Int)
   UsageSnap(
     model: String,

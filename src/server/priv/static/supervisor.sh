@@ -163,6 +163,9 @@ cat > .git/hooks/post-commit <<'HOOK'
 mkdir -p /fbi-state
 BRANCH="$(git symbolic-ref --short HEAD)"
 
+# Record the current branch name so the server can pick it up live.
+echo "$BRANCH" > /fbi-state/branch-name
+
 # The safeguard mirror always uses the fixed claude/run-N ref so the server
 # can look up commits regardless of what the agent named the primary branch.
 MIRROR="claude/run-${RUN_ID}"

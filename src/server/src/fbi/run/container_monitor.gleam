@@ -2,7 +2,7 @@ import fbi/config.{type Config}
 import fbi/docker
 import fbi/run/types.{
   type BroadcastMsg, type RunMsg, type RunOutcome, AgentStatusChanged,
-  BroadcastChunk, ContainerExited, RunOutcome,
+  BranchUpdated, BroadcastChunk, ContainerExited, RunOutcome, TitleUpdated,
 }
 import gleam/bit_array
 import gleam/dynamic.{type Dynamic}
@@ -110,7 +110,9 @@ fn wait_and_notify(
   process.spawn_unlinked(fn() {
     let state_dir = config.runs_dir <> "/" <> int.to_string(run_id) <> "/state"
     let watcher_pid =
-      process.spawn_unlinked(fn() { poll_status_loop("", state_dir, actor) })
+      process.spawn_unlinked(fn() {
+        poll_status_loop("", "", "", state_dir, actor)
+      })
     let exit_code = wait_for_exit(config, cid)
     process.kill(watcher_pid)
     let outcome = read_outcome(state_dir, exit_code)
@@ -121,25 +123,47 @@ fn wait_and_notify(
 }
 
 fn poll_status_loop(
-  prev: String,
+  prev_status: String,
+  prev_title: String,
+  prev_branch: String,
   state_dir: String,
   actor: Subject(RunMsg),
 ) -> Nil {
-  let next = case read_agent_status(state_dir) {
-    Some(status) if status != prev -> {
+  let next_status = case read_agent_status(state_dir) {
+    Some(status) if status != prev_status -> {
       process.send(actor, AgentStatusChanged(status))
       status
     }
     Some(status) -> status
-    None -> prev
+    None -> prev_status
+  }
+  let next_title = case read_state_file(state_dir <> "/title") {
+    Some(title) if title != prev_title -> {
+      process.send(actor, TitleUpdated(title))
+      title
+    }
+    Some(title) -> title
+    None -> prev_title
+  }
+  let next_branch = case read_state_file(state_dir <> "/branch-name") {
+    Some(branch) if branch != prev_branch -> {
+      process.send(actor, BranchUpdated(branch))
+      branch
+    }
+    Some(branch) -> branch
+    None -> prev_branch
   }
   process.sleep(500)
-  poll_status_loop(next, state_dir, actor)
+  poll_status_loop(next_status, next_title, next_branch, state_dir, actor)
 }
 
 /// Returns None if missing or empty — callers treat None as "no change."
 pub fn read_agent_status(state_dir: String) -> Option(String) {
-  case simplifile.read(state_dir <> "/agent-status") {
+  read_state_file(state_dir <> "/agent-status")
+}
+
+fn read_state_file(path: String) -> Option(String) {
+  case simplifile.read(path) {
     Ok(contents) ->
       case string.trim(contents) {
         "" -> None

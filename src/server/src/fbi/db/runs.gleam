@@ -326,6 +326,39 @@ pub fn siblings(
   )
 }
 
+/// Update title only when it has not been manually locked by the user.
+pub fn set_title_from_agent(
+  db: sqlight.Connection,
+  id: Int,
+  title: String,
+) -> Result(Nil, DbError) {
+  sqlight.query(
+    "UPDATE runs SET title = ? WHERE id = ? AND title_locked = 0",
+    on: db,
+    with: [sqlight.text(title), sqlight.int(id)],
+    expecting: decode.at([0], decode.int),
+  )
+  |> result.map_error(SqlightError)
+  |> result.map(fn(_) { Nil })
+}
+
+/// Update the branch_name recorded for a run — called during execution when
+/// the agent renames the branch (detected via /fbi-state/branch-name).
+pub fn update_branch_name(
+  db: sqlight.Connection,
+  id: Int,
+  branch: String,
+) -> Result(Nil, DbError) {
+  sqlight.query(
+    "UPDATE runs SET branch_name = ? WHERE id = ?",
+    on: db,
+    with: [sqlight.text(branch), sqlight.int(id)],
+    expecting: decode.at([0], decode.int),
+  )
+  |> result.map_error(SqlightError)
+  |> result.map(fn(_) { Nil })
+}
+
 pub fn patch_title(
   db: sqlight.Connection,
   id: Int,

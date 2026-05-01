@@ -6,11 +6,12 @@ import fbi/run/container_monitor
 import fbi/run/registry.{type RegistryMsg, Unregister}
 import fbi/run/types.{
   type BroadcastMsg, type Phase, type RunMsg, type RunOutcome,
-  type TerminalEvent, AgentStatusChanged, BroadcastChunk, BroadcastEvent,
-  BroadcastShutdown, BroadcastSubscribe, BroadcastUnsubscribe, Cancel,
-  ContainerExited, Done, Failed, Finishing, Resize, Running, Shutdown, Snapshot,
-  Starting, StateChanged, Subscribe, Unsubscribe, Waiting, WaitingTimeout,
-  WorkerFailed, WorkerReady, WriteStdin,
+  type TerminalEvent, AgentStatusChanged, BranchChanged, BranchUpdated,
+  BroadcastChunk, BroadcastEvent, BroadcastShutdown, BroadcastSubscribe,
+  BroadcastUnsubscribe, Cancel, ContainerExited, Done, Failed, Finishing, Resize,
+  Running, Shutdown, Snapshot, Starting, StateChanged, Subscribe, TitleChanged,
+  TitleUpdated, Unsubscribe, Waiting, WaitingTimeout, WorkerFailed, WorkerReady,
+  WriteStdin,
 }
 import fbi/run/usage_tailer.{type TailerMsg}
 import gleam/bit_array
@@ -229,6 +230,16 @@ fn handle(state: State, msg: RunMsg) -> actor.Next(State, RunMsg) {
         _ -> Nil
       }
       process.send(bc, BroadcastEvent(StateChanged(status)))
+      actor.continue(state)
+    }
+    Running(_, _, bc, _, _), TitleUpdated(title) -> {
+      let _ = runs_db.set_title_from_agent(state.db, state.run_id, title)
+      process.send(bc, BroadcastEvent(TitleChanged(title)))
+      actor.continue(state)
+    }
+    Running(_, _, bc, _, _), BranchUpdated(branch) -> {
+      let _ = runs_db.update_branch_name(state.db, state.run_id, branch)
+      process.send(bc, BroadcastEvent(BranchChanged(branch)))
       actor.continue(state)
     }
     Running(cid, _, bc, _, _), ContainerExited(outcome) ->

@@ -217,6 +217,17 @@ fn handle_live_frame(
         json.object([
           #("type", json.string("title")),
           #("title", json.string(title)),
+          #("title_locked", json.int(0)),
+        ])
+        |> json.to_string()
+      let _ = mist.send_text_frame(conn, body)
+      mist.continue(state)
+    }
+    mist.Custom(types.BranchChanged(branch)) -> {
+      let body =
+        json.object([
+          #("type", json.string("branch")),
+          #("branch_name", json.string(branch)),
         ])
         |> json.to_string()
       let _ = mist.send_text_frame(conn, body)

@@ -193,6 +193,11 @@ export type RunWsTitleMessage = {
   title_locked: 0 | 1;
 };
 
+export type RunWsBranchMessage = {
+  type: 'branch';
+  branch_name: string;
+};
+
 export type FileStatus = 'M' | 'A' | 'D' | 'R' | 'U';
 
 export interface FilesDirtyEntry {

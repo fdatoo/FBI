@@ -10,6 +10,7 @@ pub type Phase {
     cols: Int,
     rows: Int,
   )
+  Cancelling(container_id: String, broadcaster: Subject(BroadcastMsg))
   Waiting(outcome: RunOutcome, broadcaster: Subject(BroadcastMsg))
   Finishing(outcome: RunOutcome)
   Done(outcome: RunOutcome)

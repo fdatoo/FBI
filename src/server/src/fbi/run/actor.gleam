@@ -8,10 +8,10 @@ import fbi/run/types.{
   type BroadcastMsg, type Phase, type RunMsg, type RunOutcome,
   type TerminalEvent, AgentStatusChanged, BranchChanged, BranchUpdated,
   BroadcastChunk, BroadcastEvent, BroadcastShutdown, BroadcastSubscribe,
-  BroadcastUnsubscribe, Cancel, ContainerExited, Done, Failed, Finishing, Resize,
-  Running, Shutdown, Snapshot, Starting, StateChanged, Subscribe, TitleChanged,
-  TitleUpdated, Unsubscribe, Waiting, WaitingTimeout, WorkerFailed, WorkerReady,
-  WriteStdin,
+  BroadcastUnsubscribe, Cancel, Cancelling, ContainerExited, Done, Failed,
+  Finishing, Resize, RunOutcome, Running, Shutdown, Snapshot, Starting,
+  StateChanged, Subscribe, TitleChanged, TitleUpdated, Unsubscribe, Waiting,
+  WaitingTimeout, WorkerFailed, WorkerReady, WriteStdin,
 }
 import fbi/run/usage_tailer.{type TailerMsg}
 import gleam/bit_array
@@ -244,7 +244,7 @@ fn handle(state: State, msg: RunMsg) -> actor.Next(State, RunMsg) {
     }
     Running(cid, _, bc, _, _), ContainerExited(outcome) ->
       transition_to_waiting(state, cid, bc, outcome)
-    Running(cid, _, _, _, _), Cancel -> {
+    Running(cid, _, bc, _, _), Cancel -> {
       case docker.connect(state.config.docker_socket) {
         Ok(sock) -> {
           let _ = docker.kill_container(sock, cid)
@@ -258,7 +258,36 @@ fn handle(state: State, msg: RunMsg) -> actor.Next(State, RunMsg) {
             <> docker.describe_error(e),
           )
       }
-      actor.continue(state)
+      actor.continue(State(..state, phase: Cancelling(cid, bc)))
+    }
+
+    // ── Cancelling ────────────────────────────────────────────────────────────
+    Cancelling(_, bc), Subscribe(client) -> {
+      process.send(bc, BroadcastSubscribe(client))
+      send_snapshot(state, client, 80, 24)
+      actor.continue(State(..state, listener_count: state.listener_count + 1))
+    }
+    Cancelling(_, bc), Unsubscribe(client) -> {
+      process.send(bc, BroadcastUnsubscribe(client))
+      actor.continue(
+        State(..state, listener_count: int.max(0, state.listener_count - 1)),
+      )
+    }
+    Cancelling(cid, bc), ContainerExited(outcome) -> {
+      // The run was explicitly cancelled. If the container happened to exit
+      // with code 0 (e.g. result.json written before sleep_forever, or any
+      // other race), override the exit code so mark_finished uses "failed"
+      // rather than "succeeded".
+      let cancelled_outcome = case outcome.exit_code {
+        0 ->
+          RunOutcome(
+            ..outcome,
+            exit_code: -1,
+            error_message: option.Some("cancelled"),
+          )
+        _ -> outcome
+      }
+      transition_to_waiting(state, cid, bc, cancelled_outcome)
     }
 
     // ── Waiting ──────────────────────────────────────────────────────────────

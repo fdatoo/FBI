@@ -3,6 +3,7 @@ import fbi/db/projects.{type Project}
 import fbi/db/runs.{type Run}
 import fbi/docker
 import fbi/docker/tar
+import fbi/git
 import fbi/run/devcontainer_fetcher
 import fbi/run/image_builder
 import fbi/run/types.{
@@ -477,6 +478,21 @@ fn setup_run_dir(input: LaunchInput) -> Result(Nil, String) {
     |> result.map_error(fn(e) {
       "mkdir scripts: " <> simplifile.describe_error(e)
     }),
+  )
+  // Initialize wip/ as a bare git repo. The container's supervisor adds it
+  // as the `safeguard` remote and the wip-snapshotter + post-commit hook
+  // push there; the changes endpoint reads commits from the same path. If
+  // it's left as an empty plain directory, every push fails with "does not
+  // appear to be a git repository" and the UI shows "No changes yet".
+  use _ <- result.try(
+    simplifile.create_directory_all(run_dir <> "/wip")
+    |> result.map_error(fn(e) {
+      "mkdir wip: " <> simplifile.describe_error(e)
+    }),
+  )
+  use _ <- result.try(
+    git.run(run_dir <> "/wip", ["init", "--quiet", "--bare"])
+    |> result.map_error(fn(e) { "git init wip: " <> git.describe_error(e) }),
   )
   use _ <- result.try(copy_script(
     fbi_priv_path("static/supervisor.sh"),

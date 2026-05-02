@@ -29,9 +29,14 @@ fn serve_changes(ctx: Context, run_id: Int) -> Response {
       let repo_path =
         ctx.config.runs_dir <> "/" <> int.to_string(run_id) <> "/wip"
       let default = resolve_default_branch(ctx, run.project_id)
-      let branch = run.branch_name
+      // The safeguard mirror always stores the run's commits at the fixed
+      // claude/run-N ref (see post-commit hook in supervisor.sh), so the
+      // server can locate them even after the agent renames the primary
+      // branch. The renamed name is reported back to the UI via branch_name.
+      let mirror_ref = "claude/run-" <> int.to_string(run_id)
+      let display_branch = run.branch_name
       let commits =
-        repo.commits_on_branch(repo_path, branch, default)
+        repo.commits_on_branch(repo_path, mirror_ref, default)
         |> result.unwrap([])
       let commits_with_files =
         list.map(commits, fn(c) {
@@ -40,7 +45,7 @@ fn serve_changes(ctx: Context, run_id: Int) -> Response {
         })
       let pushed_all = run.mirror_status == option.Some("ok")
       let base =
-        repo.branch_base_ahead_behind(repo_path, branch, default)
+        repo.branch_base_ahead_behind(repo_path, mirror_ref, default)
         |> result.map(option.Some)
         |> result.unwrap(option.None)
       let uncommitted = case repo.wip_files(repo_path) {
@@ -49,7 +54,7 @@ fn serve_changes(ctx: Context, run_id: Int) -> Response {
       }
       let children = runs_db.children_of(ctx.db, run_id) |> result.unwrap([])
       json.object([
-        #("branch_name", json.string(branch)),
+        #("branch_name", json.string(display_branch)),
         #("branch_base", encode_branch_base(base)),
         #(
           "commits",

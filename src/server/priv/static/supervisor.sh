@@ -101,6 +101,17 @@ git remote add safeguard /safeguard 2>/dev/null \
     || git remote set-url safeguard /safeguard \
     || { _fbi_fatal "could not register safeguard remote"; exit 14; }
 
+# Seed the safeguard mirror with the default branch ref so the server's
+# changes endpoint can compute base..branch (otherwise commits show "No
+# changes yet" because git log can't resolve the base side). Skipped for
+# repos without a usable default-branch tracking ref.
+if [ -n "${DEFAULT_BRANCH:-}" ] \
+    && git rev-parse --verify --quiet "refs/remotes/origin/$DEFAULT_BRANCH" >/dev/null 2>&1; then
+    git push --quiet safeguard \
+        "refs/remotes/origin/$DEFAULT_BRANCH:refs/heads/$DEFAULT_BRANCH" \
+        2>/dev/null || true
+fi
+
 # Checkout the primary branch. Resume mode prefers safeguard; fresh mode
 # prefers origin; both fall back to creating the branch locally.
 CHECKED_OUT=0

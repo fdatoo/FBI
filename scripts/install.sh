@@ -61,6 +61,7 @@ GIT_AUTHOR_EMAIL=you@example.com
 # HOST_CLAUDE_DIR=/home/fbi/.claude
 # DOCKER_SOCKET=/var/run/docker.sock
 # HOST_DOCKER_GID=995
+FBI_DEFAULT_MARKETPLACES=anthropics/claude-plugins-official
 FBI_DEFAULT_PLUGINS=superpowers@claude-plugins-official
 ENV
   sudo chmod 640 /etc/default/fbi

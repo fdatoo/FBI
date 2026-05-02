@@ -384,33 +384,24 @@ fn claude_config_binds(dir: String) -> List(String) {
   // (theme, trusted projects, permission acks, session metadata) lives
   // at /home/<user>/.claude.json — sibling of dir.
   let parent = path_dirname(dir)
-  let file_binds =
-    [
-      #(
-        dir <> "/.credentials.json",
-        "/home/agent/.claude/.credentials.json",
-        "rw",
-      ),
-      #(parent <> "/.claude.json", "/home/agent/.claude.json", "rw"),
-      #(dir <> "/settings.json", "/home/agent/.claude/settings.json", "rw"),
-    ]
-    |> list.filter_map(fn(t) {
-      let #(host, container, mode) = t
-      case is_regular_file(host) {
-        True -> Ok(host <> ":" <> container <> ":" <> mode)
-        False -> Error(Nil)
-      }
-    })
-  // settings.json may reference enabledPlugins whose hooks live in the
-  // plugin cache. Mount it read-only so hooks register without needing
-  // a re-install on every run. FBI_PLUGINS installs of plugins that are
-  // already cached will be no-ops; plugins not yet cached should be
-  // pre-installed on the host first so they land here.
-  let plugin_binds = case is_regular_directory(dir <> "/plugins") {
-    True -> [dir <> "/plugins:/home/agent/.claude/plugins:ro"]
-    False -> []
-  }
-  list.append(file_binds, plugin_binds)
+  // We deliberately do NOT bind-mount the host's ~/.claude/plugins. Its
+  // metadata files (known_marketplaces.json, installed_plugins.json) store
+  // absolute paths under the host user's home, and claude validates that
+  // installLocations sit under the running user's ~/.claude/plugins —
+  // failing with "corrupted installLocation" inside the container. Plugins
+  // are reinstalled fresh per run via FBI_MARKETPLACES + FBI_PLUGINS.
+  [
+    #(dir <> "/.credentials.json", "/home/agent/.claude/.credentials.json", "rw"),
+    #(parent <> "/.claude.json", "/home/agent/.claude.json", "rw"),
+    #(dir <> "/settings.json", "/home/agent/.claude/settings.json", "rw"),
+  ]
+  |> list.filter_map(fn(t) {
+    let #(host, container, mode) = t
+    case is_regular_file(host) {
+      True -> Ok(host <> ":" <> container <> ":" <> mode)
+      False -> Error(Nil)
+    }
+  })
 }
 
 fn is_regular_file(path: String) -> Bool {

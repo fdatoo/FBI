@@ -11,7 +11,7 @@ RUN apt-get update \
 # Pinned versions — bump these in one place when upgrading.
 ARG ASDF_VERSION=v0.14.1
 ARG ERLANG_VERSION=27.2
-ARG GLEAM_VERSION=1.9.1
+ARG GLEAM_VERSION=1.16.0
 
 # asdf + Erlang + Gleam installed under /opt so any runtime user can use them.
 # Both ASDF_DIR (asdf code) and ASDF_DATA_DIR (plugins/installs/shims) point at

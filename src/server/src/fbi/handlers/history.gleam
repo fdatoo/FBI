@@ -57,6 +57,11 @@ fn run_op(
       let repo_path =
         ctx.config.runs_dir <> "/" <> int.to_string(run_id) <> "/wip"
       let default = resolve_default_branch(ctx, run.project_id)
+      // The bare safeguard mirror only ever stores the run's branch under
+      // the fixed claude/run-N ref (post-commit hook in supervisor.sh).
+      // run.branch_name reflects the agent's rename for UI display, but
+      // would not resolve in the mirror. Always operate on the mirror ref.
+      let mirror_ref = "claude/run-" <> int.to_string(run_id)
       case op {
         "squash-local" -> {
           let dec = {
@@ -68,7 +73,7 @@ fn run_op(
               case
                 history_ops.squash_local(
                   repo_path,
-                  run.branch_name,
+                  mirror_ref,
                   default,
                   subject,
                 )
@@ -83,7 +88,7 @@ fn run_op(
           case
             history_ops.mirror_rebase(
               repo_path,
-              run.branch_name,
+              mirror_ref,
               "origin",
               default,
             )
